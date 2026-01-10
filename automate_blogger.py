@@ -184,7 +184,7 @@ Generate the content:"""
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-2.0-flash-exp',
+                model='gemini-2.5-flash',
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.8,
@@ -653,3 +653,4 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
         exit(1)
+
