@@ -147,9 +147,9 @@ def get_next_topic():
 
 # ==================== CONTENT GENERATION ====================
 
-def generate_blog_content(client, topic, details, day, category):
+def generate_blog_content(client, topic, details, category):
     """Generate blog post content using Gemini AI"""
-    print(f"Generating content for Day {day}: {topic}")
+    print(f"Generating content for: {topic}")
     
     prompt = f"""You are an expert cryptocurrency and blockchain content writer for the blog "Crypto Basic Guide" (cryptobasicguide.blogspot.com).
 
@@ -632,7 +632,7 @@ def main():
     
     # Generate content
     print("Step 1: Generating blog content...")
-    content = generate_blog_content(client, topic, details, day, category)
+    content = generate_blog_content(client, topic, details, category)
     
     if not content:
         print("Failed to generate content")
@@ -675,7 +675,7 @@ def main():
     
     # Publish to Blogger
     print("Step 4: Publishing to Blogger...")
-    title = f"Day {day}: {topic}"
+    title = topic  # Use only the topic as title, without day prefix
     labels = [category, "Cryptocurrency", "Blockchain"]
     
     success = publish_to_blogger(title, content_html, labels, image_url)
