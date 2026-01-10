@@ -14,13 +14,19 @@ from google import genai
 from google.genai import types
 from io import BytesIO
 from PIL import Image
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request as AuthRequest
 
 # ==================== CONFIGURATION ====================
 
 # API Keys (Set these as environment variables)
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 UNSPLASH_ACCESS_KEY = os.environ.get('UNSPLASH_ACCESS_KEY', '')
-BLOGGER_API_KEY = os.environ.get('BLOGGER_API_KEY', '')
+
+# Blogger OAuth Configuration
+BLOGGER_CLIENT_ID = os.environ.get('BLOGGER_CLIENT_ID', '')
+BLOGGER_CLIENT_SECRET = os.environ.get('BLOGGER_CLIENT_SECRET', '')
+BLOGGER_REFRESH_TOKEN = os.environ.get('BLOGGER_REFRESH_TOKEN', '')
 
 # Blogger Configuration
 BLOG_ID = os.environ.get('BLOG_ID', '')  # Extract from your Blogger dashboard
@@ -416,10 +422,25 @@ def save_image_locally(image_data, day):
 
 # ==================== BLOGGER API ====================
 
+def get_oauth_access_token():
+    """Get OAuth access token from refresh token"""
+    credentials = Credentials(
+        None,
+        refresh_token=BLOGGER_REFRESH_TOKEN,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=BLOGGER_CLIENT_ID,
+        client_secret=BLOGGER_CLIENT_SECRET
+    )
+    
+    # Refresh the token
+    credentials.refresh(AuthRequest())
+    return credentials.token
+
+
 def publish_to_blogger(title, content_html, labels, image_url=None):
-    """Publish post to Blogger via API v3"""
-    if not BLOGGER_API_KEY or not BLOG_ID:
-        print("Error: BLOGGER_API_KEY or BLOG_ID not set")
+    """Publish post to Blogger via API v3 with OAuth"""
+    if not BLOGGER_CLIENT_ID or not BLOGGER_CLIENT_SECRET or not BLOGGER_REFRESH_TOKEN or not BLOG_ID:
+        print("Error: Blogger OAuth credentials or BLOG_ID not set")
         return False
     
     # Prepare post data
@@ -436,20 +457,24 @@ def publish_to_blogger(title, content_html, labels, image_url=None):
         image_html = f'<div class="separator" style="clear: both; text-align: center;"><img border="0" src="{image_url}" alt="{title}" style="max-width: 100%; height: auto;" /></div>'
         post_data["content"] = image_html + "\n\n" + content_html
     
-    params = {
-        "key": BLOGGER_API_KEY
-    }
-    
     max_retries = 3
     retry_delay = 10
     
     for attempt in range(max_retries):
         try:
+            # Get fresh access token
+            access_token = get_oauth_access_token()
+            
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+            
             print(f"Publishing to Blogger: {title} (attempt {attempt + 1}/{max_retries})")
             response = requests.post(
                 BLOGGER_API_URL,
                 json=post_data,
-                params=params,
+                headers=headers,
                 timeout=30
             )
             
@@ -506,9 +531,10 @@ def main():
         print("Get your API key from: https://aistudio.google.com/app/apikey")
         return False
     
-    if not BLOGGER_API_KEY:
-        print("Error: BLOGGER_API_KEY environment variable not set")
-        print("Get your API key from: Google Cloud Console")
+    if not BLOGGER_CLIENT_ID or not BLOGGER_CLIENT_SECRET or not BLOGGER_REFRESH_TOKEN:
+        print("Error: Blogger OAuth credentials not set")
+        print("Required: BLOGGER_CLIENT_ID, BLOGGER_CLIENT_SECRET, BLOGGER_REFRESH_TOKEN")
+        print("Run get_oauth_token.py to generate these credentials")
         return False
     
     if not BLOG_ID:
