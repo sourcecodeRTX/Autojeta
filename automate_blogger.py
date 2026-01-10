@@ -153,39 +153,58 @@ def generate_blog_content(client, topic, details, day, category):
     
     prompt = f"""You are an expert cryptocurrency and blockchain content writer for the blog "Crypto Basic Guide" (cryptobasicguide.blogspot.com).
 
-Write a comprehensive, detailed, SEO-optimized blog post about: {topic}
+Write a comprehensive, detailed, narrative-driven blog post about: {topic}
 
 Additional Context: {details if details else 'Provide comprehensive coverage of the topic'}
 
 Requirements:
 1. Write a DETAILED, informative article (1500-2000 words) - make it comprehensive and valuable
-2. Use clear headings and subheadings (## for main sections, ### for subsections)
-3. Include multiple practical examples and real-world applications with explanations
-4. Write in a beginner-friendly yet professional and engaging tone
-5. Add actionable tips, insights, and step-by-step guidance
-6. Include current trends, statistics, and future outlook
-7. Use bullet points and numbered lists extensively with detailed explanations
-8. Explain technical terms when first introduced
-9. Add context and background information
-10. Include common mistakes to avoid
-11. Focus on cryptocurrency and blockchain technology
-12. Category: {category}
+2. Use a NARRATIVE, STORYTELLING approach - tell a story, don't just list facts
+3. Write like you're having a conversation with a friend - engaging, personal, relatable
+4. Use clear headings and subheadings (## for main sections, ### for subsections)
+5. Include real-world scenarios, case studies, and relatable examples
+6. Start with a compelling hook or story that draws readers in
+7. Use analogies and metaphors to explain complex concepts
+8. Add personal insights, opinions, and expert perspectives
+9. Include step-by-step walkthroughs where appropriate
+10. Discuss both benefits and risks honestly
+11. Share practical tips from real-world experience
+12. Include current trends, market movements, and future predictions
+13. Explain technical terms naturally within the narrative
+14. Add context about why this matters to readers personally
+15. DO NOT USE EMOJIS - write professionally without emoji characters
+16. Focus on cryptocurrency and blockchain technology
+17. Category: {category}
 
 Structure (aim for 1500-2000 words total):
-- Introduction (2-3 paragraphs explaining why this topic matters)
-- Main content with 4-6 detailed sections covering different aspects
-- Each section should have multiple paragraphs with examples
-- Include practical tips and best practices
-- Common pitfalls or mistakes to avoid
-- Future trends and outlook
-- Key takeaways/summary
-- Conclusion with call-to-action
+- Opening Story/Hook (grab attention with a real scenario or surprising fact)
+- Introduction (2-3 paragraphs setting the scene and explaining importance)
+- Main narrative with 4-6 detailed sections:
+  * Each section should flow naturally from the previous one
+  * Use transitions and connecting phrases
+  * Include examples, scenarios, and real-world applications
+  * Mix explanation with storytelling
+- Practical guidance section (actionable tips readers can use immediately)
+- Common mistakes and how to avoid them (from real experiences)
+- Future outlook and trends (where things are heading)
+- Conclusion with key takeaways and next steps
 
-Write detailed explanations, not just brief overviews. Each section should be substantial.
+Tone:
+- Conversational and friendly, but professional
+- Educational without being preachy
+- Honest about both opportunities and risks
+- Confident but not overconfident
+- Avoid hype and unrealistic promises
+
+DO NOT INCLUDE:
+- Emojis or emoji characters of any kind
+- Generic advice - be specific and detailed
+- Overly technical jargon without explanation
+- Financial advice disclaimers (readers understand this is educational)
 
 Format the content in Markdown with proper headings.
 
-Generate the comprehensive content (1500-2000 words):"""
+Generate the comprehensive, narrative-driven content (1500-2000 words):"""
 
     max_retries = 3
     retry_delay = 5
@@ -197,7 +216,7 @@ Generate the comprehensive content (1500-2000 words):"""
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.8,
-                    max_output_tokens=2048,
+                    max_output_tokens=4096,
                 )
             )
             
@@ -289,34 +308,61 @@ def convert_markdown_to_html(markdown_content):
 # ==================== IMAGE HANDLING ====================
 
 def generate_image_search_query(client, topic):
-    """Generate simple Unsplash search query - using keywords to save API quota"""
-    # Use simple, relevant keywords based on topic (saves AI quota)
-    topic_lower = topic.lower()
-    
-    if 'bitcoin' in topic_lower:
-        return "bitcoin cryptocurrency"
-    elif 'ethereum' in topic_lower:
-        return "ethereum blockchain"
-    elif 'wallet' in topic_lower:
-        return "crypto wallet security"
-    elif 'trading' in topic_lower or 'invest' in topic_lower:
-        return "cryptocurrency trading"
-    elif 'nft' in topic_lower:
-        return "nft digital art"
-    elif 'defi' in topic_lower:
-        return "decentralized finance"
-    elif 'blockchain' in topic_lower:
-        return "blockchain technology"
-    elif 'mining' in topic_lower:
-        return "crypto mining"
-    elif 'altcoin' in topic_lower:
-        return "altcoin cryptocurrency"
-    else:
-        return "cryptocurrency blockchain"
+    """Generate optimized Unsplash search query using Gemini AI"""
+    prompt = f"""Generate a concise, visual search query for Unsplash to find a professional cryptocurrency-related image.
+
+Topic: {topic}
+
+Requirements:
+- Create a search query that will find high-quality, relevant images
+- Focus on visual elements: coins, technology, charts, digital assets, blockchain visuals
+- Keep it 2-4 words maximum
+- Use specific, descriptive terms that work well for image search
+- Avoid abstract concepts, focus on tangible visual elements
+
+Examples of good queries:
+- "bitcoin gold coin"
+- "ethereum blockchain network"
+- "cryptocurrency trading chart"
+- "digital wallet security"
+
+Return ONLY the search query (2-4 words), nothing else."""
+
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                temperature=0.7,
+                max_output_tokens=20,
+            )
+        )
+        
+        query = response.text.strip().strip('"').strip("'").strip()
+        # Ensure query is not too long (max 4 words) or too short (min 2 words)
+        words = query.split()
+        if len(words) > 4:
+            query = ' '.join(words[:4])
+        elif len(words) < 2:
+            query = f"{query} cryptocurrency"
+        
+        print(f"Generated image query: {query}")
+        return query
+        
+    except Exception as e:
+        print(f"Error generating image query: {e}")
+        # Fallback to topic-based keywords
+        topic_lower = topic.lower()
+        if 'bitcoin' in topic_lower:
+            return "bitcoin cryptocurrency"
+        elif 'ethereum' in topic_lower:
+            return "ethereum blockchain"
+        else:
+            return "cryptocurrency blockchain"
 
 
 def get_unsplash_image(topic):
-    """Download image from Unsplash"""
+    """Download image from Unsplash with random selection"""
     if not UNSPLASH_ACCESS_KEY:
         print("Warning: UNSPLASH_ACCESS_KEY not set, skipping image")
         return None
@@ -334,7 +380,7 @@ def get_unsplash_image(topic):
             params = {
                 "query": search_query,
                 "orientation": "landscape",
-                "per_page": 1
+                "per_page": 10  # Get 10 results to randomly choose from
             }
             
             response = requests.get(url, headers=headers, params=params, timeout=15)
@@ -343,12 +389,15 @@ def get_unsplash_image(topic):
             data = response.json()
             
             if data.get('results') and len(data['results']) > 0:
-                photo = data['results'][0]
+                # Randomly select an image from the results
+                import random
+                photo = random.choice(data['results'])
+                
                 image_url = photo['urls']['regular']
                 photographer = photo['user']['name']
                 photographer_url = photo['user']['links']['html']
                 
-                print(f"Found image by {photographer}")
+                print(f"Found image by {photographer} (selected from {len(data['results'])} results)")
                 
                 # Download image
                 img_response = requests.get(image_url, timeout=15)
@@ -457,13 +506,19 @@ def publish_to_blogger(title, content_html, labels, image_url=None):
         "labels": labels
     }
     
-    # Add featured image if available with attractive styling
+    # Add featured image if available
     if image_url:
-        # Create visually appealing image section
-        image_html = f'''<div class="featured-image" style="text-align: center; margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-    <img src="{image_url}" alt="{title}" style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3);" />
+        # Extract attribution if embedded in URL
+        actual_url = image_url
+        attribution_html = ""
+        if "#" in image_url:
+            actual_url, attribution_html = image_url.split("#", 1)
+        
+        # Simple, clean image presentation with attribution right below
+        image_html = f'''<div class="featured-image" style="text-align: center; margin: 30px 0 20px 0;">
+    <img src="{actual_url}" alt="{title}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
 </div>
-<div style="height: 20px;"></div>'''
+{attribution_html}'''
         post_data["content"] = image_html + "\n\n" + content_html
     
     max_retries = 3
@@ -606,11 +661,9 @@ def main():
             image_path = save_image_locally(compressed_data, day)
             
             # Use GitHub raw URL for the image (publicly accessible)
-            image_url = f"https://raw.githubusercontent.com/sourcecodeRTX/Autojeta/main/images/day-{day}.jpg"
-            
-            # Add attribution to content
-            attribution = f'<p style="text-align: center; font-size: 14px; color: #888; margin-top: 30px;"><em>Photo by <a href="{image_data_dict["photographer_url"]}" target="_blank">{image_data_dict["photographer"]}</a> on <a href="{image_data_dict["unsplash_url"]}" target="_blank">Unsplash</a></em></p>'
-            content_html += "\n\n" + attribution
+            # Include attribution that will be placed right after the image
+            attribution = f'<p style="text-align: center; font-size: 13px; color: #888; margin: 10px 0 30px 0;"><em>Photo by <a href="{image_data_dict["photographer_url"]}" target="_blank" style="color: #888; text-decoration: underline;">{image_data_dict["photographer"]}</a> on <a href="{image_data_dict["unsplash_url"]}" target="_blank" style="color: #888; text-decoration: underline;">Unsplash</a></em></p>'
+            image_url = f"https://raw.githubusercontent.com/sourcecodeRTX/Autojeta/main/images/day-{day}.jpg#{attribution}"
             
             print("✓ Image processed and saved")
             print(f"  GitHub URL: {image_url}")
