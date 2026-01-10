@@ -153,30 +153,39 @@ def generate_blog_content(client, topic, details, day, category):
     
     prompt = f"""You are an expert cryptocurrency and blockchain content writer for the blog "Crypto Basic Guide" (cryptobasicguide.blogspot.com).
 
-Write a comprehensive, SEO-optimized blog post about: {topic}
+Write a comprehensive, detailed, SEO-optimized blog post about: {topic}
 
 Additional Context: {details if details else 'Provide comprehensive coverage of the topic'}
 
 Requirements:
-1. Write an engaging, informative article (800-1200 words)
-2. Use clear headings and subheadings (## and ###)
-3. Include practical examples and real-world applications
-4. Write in a beginner-friendly yet professional tone
-5. Add actionable tips and insights
-6. Include current trends and future outlook
-7. Use bullet points and numbered lists where appropriate
-8. Focus on cryptocurrency and blockchain technology
-9. Category: {category}
+1. Write a DETAILED, informative article (1500-2000 words) - make it comprehensive and valuable
+2. Use clear headings and subheadings (## for main sections, ### for subsections)
+3. Include multiple practical examples and real-world applications with explanations
+4. Write in a beginner-friendly yet professional and engaging tone
+5. Add actionable tips, insights, and step-by-step guidance
+6. Include current trends, statistics, and future outlook
+7. Use bullet points and numbered lists extensively with detailed explanations
+8. Explain technical terms when first introduced
+9. Add context and background information
+10. Include common mistakes to avoid
+11. Focus on cryptocurrency and blockchain technology
+12. Category: {category}
 
-Structure:
-- Introduction (hook the reader)
-- Main content with clear sections
+Structure (aim for 1500-2000 words total):
+- Introduction (2-3 paragraphs explaining why this topic matters)
+- Main content with 4-6 detailed sections covering different aspects
+- Each section should have multiple paragraphs with examples
+- Include practical tips and best practices
+- Common pitfalls or mistakes to avoid
+- Future trends and outlook
 - Key takeaways/summary
 - Conclusion with call-to-action
 
+Write detailed explanations, not just brief overviews. Each section should be substantial.
+
 Format the content in Markdown with proper headings.
 
-Generate the content:"""
+Generate the comprehensive content (1500-2000 words):"""
 
     max_retries = 3
     retry_delay = 5
@@ -184,7 +193,7 @@ Generate the content:"""
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-2.0-flash-exp',
+                model='gemini-2.5-flash',
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.8,
@@ -216,28 +225,28 @@ Generate the content:"""
 
 
 def convert_markdown_to_html(markdown_content):
-    """Convert Markdown to HTML for Blogger"""
+    """Convert Markdown to beautifully styled HTML for Blogger"""
     import re
     
     html = markdown_content
     
-    # Convert headers
-    html = re.sub(r'^### (.+)$', r'<h3>\1</h3>', html, flags=re.MULTILINE)
-    html = re.sub(r'^## (.+)$', r'<h2>\1</h2>', html, flags=re.MULTILINE)
-    html = re.sub(r'^# (.+)$', r'<h1>\1</h1>', html, flags=re.MULTILINE)
+    # Convert headers with attractive styling
+    html = re.sub(r'^### (.+)$', r'<h3 style="color: #2c3e50; font-size: 22px; font-weight: 600; margin: 28px 0 15px 0; line-height: 1.4; border-left: 4px solid #3498db; padding-left: 15px;">\1</h3>', html, flags=re.MULTILINE)
+    html = re.sub(r'^## (.+)$', r'<h2 style="color: #1a1a1a; font-size: 28px; font-weight: 700; margin: 35px 0 20px 0; padding-bottom: 12px; border-bottom: 3px solid #4CAF50; line-height: 1.3;">\1</h2>', html, flags=re.MULTILINE)
+    html = re.sub(r'^# (.+)$', r'<h1 style="color: #1a1a1a; font-size: 32px; font-weight: 800; margin: 40px 0 25px 0;">\1</h1>', html, flags=re.MULTILINE)
     
-    # Convert bold
-    html = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html)
-    html = re.sub(r'__(.+?)__', r'<strong>\1</strong>', html)
+    # Convert bold with accent color
+    html = re.sub(r'\*\*(.+?)\*\*', r'<strong style="color: #2196F3; font-weight: 600;">\1</strong>', html)
+    html = re.sub(r'__(.+?)__', r'<strong style="color: #2196F3; font-weight: 600;">\1</strong>', html)
     
     # Convert italic
-    html = re.sub(r'\*(.+?)\*', r'<em>\1</em>', html)
-    html = re.sub(r'_(.+?)_', r'<em>\1</em>', html)
+    html = re.sub(r'\*([^\*]+?)\*', r'<em style="color: #555;">\1</em>', html)
+    html = re.sub(r'_([^_]+?)_', r'<em style="color: #555;">\1</em>', html)
     
-    # Convert links
-    html = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2">\1</a>', html)
+    # Convert links with styling
+    html = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2" style="color: #3498db; text-decoration: none; border-bottom: 2px solid #3498db;">\1</a>', html)
     
-    # Convert bullet lists
+    # Convert bullet lists with better styling
     lines = html.split('\n')
     in_list = False
     result = []
@@ -245,10 +254,10 @@ def convert_markdown_to_html(markdown_content):
     for line in lines:
         if line.strip().startswith('- ') or line.strip().startswith('* '):
             if not in_list:
-                result.append('<ul>')
+                result.append('<ul style="margin: 20px 0; padding-left: 35px; line-height: 1.9;">')
                 in_list = True
             item = line.strip()[2:]
-            result.append(f'<li>{item}</li>')
+            result.append(f'<li style="margin: 10px 0; color: #444; font-size: 17px; list-style-type: disc;">{item}</li>')
         else:
             if in_list:
                 result.append('</ul>')
@@ -260,52 +269,49 @@ def convert_markdown_to_html(markdown_content):
     
     html = '\n'.join(result)
     
-    # Convert paragraphs
+    # Convert paragraphs with better spacing and typography
     paragraphs = html.split('\n\n')
     html_paragraphs = []
     
     for para in paragraphs:
         para = para.strip()
         if para and not para.startswith('<'):
-            html_paragraphs.append(f'<p>{para}</p>')
-        else:
+            html_paragraphs.append(f'<p style="line-height: 1.9; margin: 18px 0; color: #333; font-size: 17px; text-align: justify;">{para}</p>')
+        elif para:
             html_paragraphs.append(para)
     
-    return '\n\n'.join(html_paragraphs)
+    html_content = '\n\n'.join(html_paragraphs)
+    
+    # Wrap in a container div for consistent styling
+    return f'<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; max-width: 100%; padding: 0;">{html_content}</div>'
 
 
 # ==================== IMAGE HANDLING ====================
 
 def generate_image_search_query(client, topic):
-    """Generate optimized Unsplash search query using Gemini"""
-    prompt = f"""Generate a specific, visual search query for Unsplash to find high-quality cryptocurrency-related images.
-
-Topic: {topic}
-
-Requirements:
-- Focus on cryptocurrency, blockchain, digital assets, fintech
-- Use visual keywords (coins, charts, technology, network, digital)
-- Keep it concise (2-4 words)
-- Avoid abstract concepts
-
-Return ONLY the search query, nothing else."""
-
-    try:
-        response = client.models.generate_content(
-            model='gemini-2.0-flash-exp',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.7,
-                max_output_tokens=50,
-            )
-        )
-        
-        query = response.text.strip().strip('"').strip("'")
-        print(f"Generated image query: {query}")
-        return query
-        
-    except Exception as e:
-        print(f"Error generating image query: {e}")
+    """Generate simple Unsplash search query - using keywords to save API quota"""
+    # Use simple, relevant keywords based on topic (saves AI quota)
+    topic_lower = topic.lower()
+    
+    if 'bitcoin' in topic_lower:
+        return "bitcoin cryptocurrency"
+    elif 'ethereum' in topic_lower:
+        return "ethereum blockchain"
+    elif 'wallet' in topic_lower:
+        return "crypto wallet security"
+    elif 'trading' in topic_lower or 'invest' in topic_lower:
+        return "cryptocurrency trading"
+    elif 'nft' in topic_lower:
+        return "nft digital art"
+    elif 'defi' in topic_lower:
+        return "decentralized finance"
+    elif 'blockchain' in topic_lower:
+        return "blockchain technology"
+    elif 'mining' in topic_lower:
+        return "crypto mining"
+    elif 'altcoin' in topic_lower:
+        return "altcoin cryptocurrency"
+    else:
         return "cryptocurrency blockchain"
 
 
@@ -370,8 +376,8 @@ def get_unsplash_image(topic):
                 return None
 
 
-def compress_image(image_data, max_size_kb=300):
-    """Compress image to target size"""
+def compress_image(image_data, max_size_kb=480):
+    """Compress image to under 500KB with high quality"""
     img = Image.open(BytesIO(image_data))
     
     # Convert to RGB if necessary
@@ -451,10 +457,13 @@ def publish_to_blogger(title, content_html, labels, image_url=None):
         "labels": labels
     }
     
-    # Add featured image if available
+    # Add featured image if available with attractive styling
     if image_url:
-        # Blogger will use the first image in content as featured image
-        image_html = f'<div class="separator" style="clear: both; text-align: center;"><img border="0" src="{image_url}" alt="{title}" style="max-width: 100%; height: auto;" /></div>'
+        # Create visually appealing image section
+        image_html = f'''<div class="featured-image" style="text-align: center; margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+    <img src="{image_url}" alt="{title}" style="max-width: 100%; height: auto; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3);" />
+</div>
+<div style="height: 20px;"></div>'''
         post_data["content"] = image_html + "\n\n" + content_html
     
     max_retries = 3
@@ -590,21 +599,21 @@ def main():
     image_url = None
     if image_data_dict:
         try:
-            # Compress image
+            # Compress image to under 500KB
             compressed_data = compress_image(image_data_dict['data'])
             
-            # Save locally
+            # Save locally (will be committed to GitHub)
             image_path = save_image_locally(compressed_data, day)
             
-            # For Blogger, we need to upload to a hosting service or use Unsplash CDN directly
-            # Using Unsplash CDN URL (recommended)
-            image_url = f"https://source.unsplash.com/1200x630/?{generate_image_search_query(client, topic).replace(' ', ',')}"
+            # Use GitHub raw URL for the image (publicly accessible)
+            image_url = f"https://raw.githubusercontent.com/sourcecodeRTX/Autojeta/main/images/day-{day}.jpg"
             
             # Add attribution to content
-            attribution = f'<p><small>Photo by <a href="{image_data_dict["photographer_url"]}">{image_data_dict["photographer"]}</a> on <a href="{image_data_dict["unsplash_url"]}">Unsplash</a></small></p>'
+            attribution = f'<p style="text-align: center; font-size: 14px; color: #888; margin-top: 30px;"><em>Photo by <a href="{image_data_dict["photographer_url"]}" target="_blank">{image_data_dict["photographer"]}</a> on <a href="{image_data_dict["unsplash_url"]}" target="_blank">Unsplash</a></em></p>'
             content_html += "\n\n" + attribution
             
             print("✓ Image processed and saved")
+            print(f"  GitHub URL: {image_url}")
         except Exception as e:
             print(f"Warning: Image processing failed: {e}")
     else:
