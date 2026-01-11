@@ -204,6 +204,8 @@ DO NOT INCLUDE:
 
 Format the content in Markdown with proper headings.
 
+IMPORTANT: Generate the COMPLETE article from start to finish. Do not stop mid-way. Write all sections including the conclusion. The article must be complete and end with a proper conclusion.
+
 Generate the comprehensive, narrative-driven content (1500-2000 words):"""
 
     max_retries = 3
@@ -216,7 +218,7 @@ Generate the comprehensive, narrative-driven content (1500-2000 words):"""
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.8,
-                    max_output_tokens=4096,
+                    max_output_tokens=8192,  # Increased from 4096 to support longer content
                 )
             )
             
@@ -230,6 +232,51 @@ Generate the comprehensive, narrative-driven content (1500-2000 words):"""
             
             if not content or len(content) < 100:
                 raise ValueError("Generated content too short")
+            
+            # Check if content appears truncated (incomplete)
+            is_truncated = (
+                not content.rstrip().endswith(('.', '!', '?', '"', "'"))  # Doesn't end with punctuation
+                or len(content) < 1000  # Too short for requested 1500-2000 words
+                or content.count('##') < 3  # Missing expected sections
+            )
+            
+            if is_truncated:
+                print(f"⚠️ Content appears incomplete ({len(content)} chars), attempting continuation...")
+                
+                # Try to continue from where it left off
+                continuation_prompt = f"""Continue writing the blog post from where you left off. Here's what was written so far:
+
+{content}
+
+---
+
+Continue writing naturally from the point where it was cut off. Complete all remaining sections including:
+- Any incomplete sections
+- Practical guidance section
+- Common mistakes and how to avoid them
+- Future outlook and trends
+- Conclusion with key takeaways and next steps
+
+Make sure to write a proper conclusion. Format in Markdown. Continue:"""
+                
+                continuation_response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=continuation_prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=0.8,
+                        max_output_tokens=4096,
+                    )
+                )
+                
+                continuation = continuation_response.text.strip()
+                if continuation.startswith('```markdown'):
+                    continuation = continuation.replace('```markdown', '').replace('```', '').strip()
+                elif continuation.startswith('```'):
+                    continuation = continuation.replace('```', '').strip()
+                
+                # Combine original and continuation
+                content = content + "\n\n" + continuation
+                print(f"✅ Content completed ({len(content)} chars total)")
             
             return content
             
@@ -308,25 +355,31 @@ def convert_markdown_to_html(markdown_content):
 # ==================== IMAGE HANDLING ====================
 
 def generate_image_search_query(client, topic):
-    """Generate optimized Unsplash search query using Gemini AI"""
-    prompt = f"""Generate a concise, visual search query for Unsplash to find a professional cryptocurrency-related image.
+    """Generate specific 2-3 word Unsplash search query using Gemini AI"""
+    prompt = f"""Generate a SPECIFIC search query for Unsplash (2-3 words) to find a professional cryptocurrency image.
 
-Topic: {topic}
+TOPIC: {topic}
 
 Requirements:
-- Create a search query that will find high-quality, relevant images
+- Generate 2-3 SPECIFIC words (not just 1 generic word like "security" or "technology")
 - Focus on visual elements: coins, technology, charts, digital assets, blockchain visuals
-- Keep it 2-4 words maximum
-- Use specific, descriptive terms that work well for image search
-- Avoid abstract concepts, focus on tangible visual elements
+- Make the query unique enough to get different image results
+- Avoid overly generic single-word queries
 
-Examples of good queries:
-- "bitcoin gold coin"
-- "ethereum blockchain network"
-- "cryptocurrency trading chart"
-- "digital wallet security"
+Examples of GOOD queries (2-3 specific words):
+- "bitcoin gold coin" (NOT just "bitcoin")
+- "ethereum blockchain network" (NOT just "ethereum")
+- "cryptocurrency trading chart" (NOT just "trading")
+- "digital wallet security" (NOT just "security")
+- "blockchain data network" (NOT just "blockchain")
 
-Return ONLY the search query (2-4 words), nothing else."""
+Examples of BAD queries (too generic):
+- "security" ❌
+- "technology" ❌
+- "crypto" ❌
+- "blockchain" ❌
+
+Return ONLY the search query (2-3 words), nothing else."""
 
     try:
         response = client.models.generate_content(
@@ -338,15 +391,15 @@ Return ONLY the search query (2-4 words), nothing else."""
             )
         )
         
-        query = response.text.strip().strip('"').strip("'").strip()
-        # Ensure query is not too long (max 4 words) or too short (min 2 words)
+        query = response.text.strip().strip('"').strip("'").strip().lower()
+        # Ensure query is 2-3 words (optimal for specific searches)
         words = query.split()
-        if len(words) > 4:
-            query = ' '.join(words[:4])
+        if len(words) > 3:
+            query = ' '.join(words[:3])
         elif len(words) < 2:
             query = f"{query} cryptocurrency"
         
-        print(f"Generated image query: {query}")
+        print(f"🔍 Generated specific image query: '{query}' (2-3 words)")
         return query
         
     except Exception as e:
@@ -361,11 +414,22 @@ Return ONLY the search query (2-4 words), nothing else."""
             return "cryptocurrency blockchain"
 
 
-def get_unsplash_image(topic):
-    """Download image from Unsplash with random selection"""
+def get_unsplash_image(topic, used_images=None):
+    """Download image from Unsplash with deduplication and random selection
+    
+    Args:
+        topic: The blog topic for image search
+        used_images: List of previously used image URLs to avoid duplicates
+    
+    Returns:
+        Dict with image data and URL for tracking, or None
+    """
     if not UNSPLASH_ACCESS_KEY:
         print("Warning: UNSPLASH_ACCESS_KEY not set, skipping image")
         return None
+    
+    if used_images is None:
+        used_images = []
     
     max_retries = 2
     
@@ -389,26 +453,52 @@ def get_unsplash_image(topic):
             data = response.json()
             
             if data.get('results') and len(data['results']) > 0:
-                # Randomly select an image from the results
-                import random
-                photo = random.choice(data['results'])
+                print(f"🔍 Total results from search: {len(data['results'])}")
                 
-                image_url = photo['urls']['regular']
-                photographer = photo['user']['name']
-                photographer_url = photo['user']['links']['html']
+                # Filter out already used images
+                available_photos = [
+                    photo for photo in data['results']
+                    if photo['urls']['regular'] not in used_images
+                ]
                 
-                print(f"Found image by {photographer} (selected from {len(data['results'])} results)")
+                print(f"🔍 Already used: {len(data['results']) - len(available_photos)}")
+                print(f"🔍 Available photos: {len(available_photos)}")
                 
-                # Download image
-                img_response = requests.get(image_url, timeout=15)
-                img_response.raise_for_status()
-                
-                return {
-                    'data': img_response.content,
-                    'photographer': photographer,
-                    'photographer_url': photographer_url,
-                    'unsplash_url': photo['links']['html']
-                }
+                if available_photos:
+                    # Randomly select from available options
+                    import random
+                    photo = random.choice(available_photos)
+                    
+                    image_url = photo['urls']['regular']  # This will be tracked
+                    photographer = photo['user']['name']
+                    photographer_url = photo['user']['links']['html']
+                    
+                    print(f"✅ Selected image by {photographer} (from {len(available_photos)} available)")
+                    
+                    # Download image
+                    img_response = requests.get(image_url, timeout=15)
+                    img_response.raise_for_status()
+                    
+                    return {
+                        'data': img_response.content,
+                        'photographer': photographer,
+                        'photographer_url': photographer_url,
+                        'unsplash_url': photo['links']['html'],
+                        'image_url': image_url  # Add URL for tracking
+                    }
+                else:
+                    print(f"⚠️ All {len(data['results'])} images from '{search_query}' have been used before")
+                    if attempt < max_retries - 1:
+                        # Fallback: try broader search with first word only
+                        fallback_query = search_query.split()[0] + " cryptocurrency"
+                        print(f"🔄 Trying fallback search: '{fallback_query}'")
+                        params["query"] = fallback_query
+                        
+                        response = requests.get(url, headers=headers, params=params, timeout=15)
+                        response.raise_for_status()
+                        data = response.json()
+                        continue
+                    return None
             else:
                 print(f"No images found for query: {search_query}")
                 if attempt < max_retries - 1:
@@ -647,11 +737,25 @@ def main():
     print("✓ Content converted to HTML")
     print()
     
-    # Get image
-    print("Step 3: Fetching image from Unsplash...")
-    image_data_dict = get_unsplash_image(topic)
+    # Get image with deduplication
+    print("Step 3: Fetching image from Unsplash with deduplication...")
+    
+    # Load used images from status
+    used_images = []
+    if os.path.exists(STATUS_FILE):
+        try:
+            with open(STATUS_FILE, 'r', encoding='utf-8') as f:
+                status = json.load(f)
+                used_images = status.get('used_images', [])
+                print(f"📋 Loaded {len(used_images)} previously used images")
+        except Exception as e:
+            print(f"⚠️ Could not load used images: {e}")
+    
+    # Pass used_images to avoid duplicates
+    image_data_dict = get_unsplash_image(topic, used_images)
     
     image_url = None
+    new_image_url = None  # For tracking
     if image_data_dict:
         try:
             # Compress image to under 500KB
@@ -660,6 +764,9 @@ def main():
             # Save locally (will be committed to GitHub)
             image_path = save_image_locally(compressed_data, day)
             
+            # Extract the image URL for tracking
+            new_image_url = image_data_dict.get('image_url')
+            
             # Use GitHub raw URL for the image (publicly accessible)
             # Include attribution that will be placed right after the image
             attribution = f'<p style="text-align: center; font-size: 13px; color: #888; margin: 10px 0 30px 0;"><em>Photo by <a href="{image_data_dict["photographer_url"]}" target="_blank" style="color: #888; text-decoration: underline;">{image_data_dict["photographer"]}</a> on <a href="{image_data_dict["unsplash_url"]}" target="_blank" style="color: #888; text-decoration: underline;">Unsplash</a></em></p>'
@@ -667,6 +774,8 @@ def main():
             
             print("✓ Image processed and saved")
             print(f"  GitHub URL: {image_url}")
+            if new_image_url:
+                print(f"  Tracking URL: {new_image_url[:60]}...")
         except Exception as e:
             print(f"Warning: Image processing failed: {e}")
     else:
@@ -686,14 +795,25 @@ def main():
     
     print()
     
-    # Update status
-    print("Step 5: Updating status...")
+    # Update status with used images tracking
+    print("Step 5: Updating status with image tracking...")
     status = load_status()
+    
+    # Get existing used_images or initialize empty list
+    used_images = status.get('used_images', [])
+    
+    # Add new image URL if available
+    if new_image_url and new_image_url not in used_images:
+        used_images.append(new_image_url)
+        print(f"📝 Added new image to tracking (total tracked: {len(used_images)})")
+    
+    # Update status
     status['next_day'] = day + 1
     status['last_processed'] = topic
     status['last_published'] = datetime.now().isoformat()
+    status['used_images'] = used_images  # Save tracked images
     save_status(status)
-    print("✓ Status updated")
+    print("✓ Status updated with image tracking")
     print()
     
     print("=" * 60)
