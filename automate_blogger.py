@@ -297,10 +297,10 @@ def convert_markdown_to_html(markdown_content):
     html = markdown_content
     
     # Convert headers with attractive styling (must go from most specific to least specific)
-    # h6, h5, h4 - convert to styled subheadings with bullet point
-    html = re.sub(r'^###### (.+)$', r'<div style="color: #34495e; font-size: 16px; font-weight: 600; margin: 18px 0 10px 20px; line-height: 1.4;"><span style="color: #3498db; margin-right: 8px;">•</span>\1</div>', html, flags=re.MULTILINE)
-    html = re.sub(r'^##### (.+)$', r'<div style="color: #34495e; font-size: 17px; font-weight: 600; margin: 20px 0 12px 15px; line-height: 1.4;"><span style="color: #3498db; margin-right: 8px;">•</span>\1</div>', html, flags=re.MULTILINE)
-    html = re.sub(r'^#### (.+)$', r'<div style="color: #2c3e50; font-size: 18px; font-weight: 600; margin: 22px 0 12px 10px; line-height: 1.4;"><span style="color: #4CAF50; margin-right: 8px;">•</span>\1</div>', html, flags=re.MULTILINE)
+    # h6, h5, h4 - convert to styled subheadings with bullet point (strip any existing bullets first)
+    html = re.sub(r'^###### •?\s*(.+)$', r'<div style="color: #34495e; font-size: 16px; font-weight: 600; margin: 18px 0 10px 20px; line-height: 1.4;"><span style="color: #3498db; margin-right: 8px;">•</span>\1</div>', html, flags=re.MULTILINE)
+    html = re.sub(r'^##### •?\s*(.+)$', r'<div style="color: #34495e; font-size: 17px; font-weight: 600; margin: 20px 0 12px 15px; line-height: 1.4;"><span style="color: #3498db; margin-right: 8px;">•</span>\1</div>', html, flags=re.MULTILINE)
+    html = re.sub(r'^#### •?\s*(.+)$', r'<div style="color: #2c3e50; font-size: 18px; font-weight: 600; margin: 22px 0 12px 10px; line-height: 1.4;"><span style="color: #4CAF50; margin-right: 8px;">•</span>\1</div>', html, flags=re.MULTILINE)
     # h3, h2, h1 - standard headings
     html = re.sub(r'^### (.+)$', r'<h3 style="color: #2c3e50; font-size: 22px; font-weight: 600; margin: 28px 0 15px 0; line-height: 1.4; border-left: 4px solid #3498db; padding-left: 15px;">\1</h3>', html, flags=re.MULTILINE)
     html = re.sub(r'^## (.+)$', r'<h2 style="color: #1a1a1a; font-size: 28px; font-weight: 700; margin: 35px 0 20px 0; padding-bottom: 12px; border-bottom: 3px solid #4CAF50; line-height: 1.3;">\1</h2>', html, flags=re.MULTILINE)
