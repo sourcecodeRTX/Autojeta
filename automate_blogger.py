@@ -296,7 +296,12 @@ def convert_markdown_to_html(markdown_content):
     
     html = markdown_content
     
-    # Convert headers with attractive styling
+    # Convert headers with attractive styling (must go from most specific to least specific)
+    # h6, h5, h4 - convert to styled subheadings with bullet point
+    html = re.sub(r'^###### (.+)$', r'<div style="color: #34495e; font-size: 16px; font-weight: 600; margin: 18px 0 10px 20px; line-height: 1.4;"><span style="color: #3498db; margin-right: 8px;">•</span>\1</div>', html, flags=re.MULTILINE)
+    html = re.sub(r'^##### (.+)$', r'<div style="color: #34495e; font-size: 17px; font-weight: 600; margin: 20px 0 12px 15px; line-height: 1.4;"><span style="color: #3498db; margin-right: 8px;">•</span>\1</div>', html, flags=re.MULTILINE)
+    html = re.sub(r'^#### (.+)$', r'<div style="color: #2c3e50; font-size: 18px; font-weight: 600; margin: 22px 0 12px 10px; line-height: 1.4;"><span style="color: #4CAF50; margin-right: 8px;">•</span>\1</div>', html, flags=re.MULTILINE)
+    # h3, h2, h1 - standard headings
     html = re.sub(r'^### (.+)$', r'<h3 style="color: #2c3e50; font-size: 22px; font-weight: 600; margin: 28px 0 15px 0; line-height: 1.4; border-left: 4px solid #3498db; padding-left: 15px;">\1</h3>', html, flags=re.MULTILINE)
     html = re.sub(r'^## (.+)$', r'<h2 style="color: #1a1a1a; font-size: 28px; font-weight: 700; margin: 35px 0 20px 0; padding-bottom: 12px; border-bottom: 3px solid #4CAF50; line-height: 1.3;">\1</h2>', html, flags=re.MULTILINE)
     html = re.sub(r'^# (.+)$', r'<h1 style="color: #1a1a1a; font-size: 32px; font-weight: 800; margin: 40px 0 25px 0;">\1</h1>', html, flags=re.MULTILINE)
@@ -312,26 +317,61 @@ def convert_markdown_to_html(markdown_content):
     # Convert links with styling
     html = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2" style="color: #3498db; text-decoration: none; border-bottom: 2px solid #3498db;">\1</a>', html)
     
-    # Convert bullet lists with better styling
+    # Convert bullet lists AND numbered lists with better styling
     lines = html.split('\n')
-    in_list = False
+    in_bullet_list = False
+    in_numbered_list = False
     result = []
     
     for line in lines:
-        if line.strip().startswith('- ') or line.strip().startswith('* '):
-            if not in_list:
+        stripped = line.strip()
+        
+        # Check for bullet list items
+        if stripped.startswith('- ') or stripped.startswith('* '):
+            # Close numbered list if open
+            if in_numbered_list:
+                result.append('</ol>')
+                in_numbered_list = False
+            
+            # Open bullet list if not already open
+            if not in_bullet_list:
                 result.append('<ul style="margin: 20px 0; padding-left: 35px; line-height: 1.9;">')
-                in_list = True
-            item = line.strip()[2:]
+                in_bullet_list = True
+            
+            item = stripped[2:]
             result.append(f'<li style="margin: 10px 0; color: #444; font-size: 17px; list-style-type: disc;">{item}</li>')
-        else:
-            if in_list:
+        
+        # Check for numbered list items (1., 2., 3., etc.)
+        elif re.match(r'^\d+\.\s+', stripped):
+            # Close bullet list if open
+            if in_bullet_list:
                 result.append('</ul>')
-                in_list = False
+                in_bullet_list = False
+            
+            # Open numbered list if not already open
+            if not in_numbered_list:
+                result.append('<ol style="margin: 20px 0; padding-left: 35px; line-height: 1.9;">')
+                in_numbered_list = True
+            
+            item = re.sub(r'^\d+\.\s+', '', stripped)
+            result.append(f'<li style="margin: 10px 0; color: #444; font-size: 17px;">{item}</li>')
+        
+        else:
+            # Close any open lists
+            if in_bullet_list:
+                result.append('</ul>')
+                in_bullet_list = False
+            if in_numbered_list:
+                result.append('</ol>')
+                in_numbered_list = False
+            
             result.append(line)
     
-    if in_list:
+    # Close any still-open lists at the end
+    if in_bullet_list:
         result.append('</ul>')
+    if in_numbered_list:
+        result.append('</ol>')
     
     html = '\n'.join(result)
     
