@@ -63,15 +63,57 @@ def initialize_apis():
 def load_status():
     """Load current status from status.json"""
     if os.path.exists(STATUS_FILE):
-        with open(STATUS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {"next_day": 1, "last_processed": ""}
+        try:
+            with open(STATUS_FILE, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if not content:
+                    print("⚠️ status.json is empty, creating new status")
+                    return {"next_day": 1, "last_processed": "", "used_images": []}
+                return json.loads(content)
+        except json.JSONDecodeError as e:
+            print(f"⚠️ Error parsing status.json: {e}")
+            print("Creating backup and starting fresh...")
+            # Backup corrupted file
+            if os.path.exists(STATUS_FILE):
+                backup_file = f"{STATUS_FILE}.backup"
+                os.rename(STATUS_FILE, backup_file)
+                print(f"Corrupted file backed up to: {backup_file}")
+            return {"next_day": 1, "last_processed": "", "used_images": []}
+        except Exception as e:
+            print(f"⚠️ Unexpected error loading status: {e}")
+            return {"next_day": 1, "last_processed": "", "used_images": []}
+    return {"next_day": 1, "last_processed": "", "used_images": []}
 
 
 def save_status(status):
-    """Save status to status.json"""
-    with open(STATUS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(status, f, indent=2, ensure_ascii=False)
+    """Save status to status.json with robust error handling"""
+    try:
+        # Ensure used_images key exists
+        if 'used_images' not in status:
+            status['used_images'] = []
+        
+        # Write to temp file first
+        temp_file = f"{STATUS_FILE}.tmp"
+        with open(temp_file, 'w', encoding='utf-8', newline='\n') as f:
+            json.dump(status, f, indent=2, ensure_ascii=False)
+            f.write('\n')  # Ensure file ends with newline
+        
+        # Verify temp file is valid JSON
+        with open(temp_file, 'r', encoding='utf-8') as f:
+            json.load(f)
+        
+        # Replace original file
+        if os.path.exists(STATUS_FILE):
+            os.remove(STATUS_FILE)
+        os.rename(temp_file, STATUS_FILE)
+        
+    except Exception as e:
+        print(f"⚠️ Error saving status: {e}")
+        # Clean up temp file if it exists
+        temp_file = f"{STATUS_FILE}.tmp"
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
+        raise
 
 
 def load_topics():
