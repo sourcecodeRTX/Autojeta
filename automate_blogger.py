@@ -296,12 +296,21 @@ def convert_markdown_to_html(markdown_content):
     
     html = markdown_content
     
-    # Convert headers with attractive styling
+    # Convert headers with attractive styling (from h1 to h6 for complete support)
+    # Process from most specific (most #) to least specific (fewest #) to avoid conflicts
+    html = re.sub(r'^###### (.+)$', r'<h6 style="color: #34495e; font-size: 16px; font-weight: 600; margin: 20px 0 12px 0; line-height: 1.4;">\1</h6>', html, flags=re.MULTILINE)
+    html = re.sub(r'^##### (.+)$', r'<h5 style="color: #2c3e50; font-size: 18px; font-weight: 600; margin: 22px 0 13px 0; line-height: 1.4;">\1</h5>', html, flags=re.MULTILINE)
+    html = re.sub(r'^#### (.+)$', r'<h4 style="color: #2c3e50; font-size: 20px; font-weight: 600; margin: 25px 0 14px 0; line-height: 1.4; border-left: 3px solid #9b59b6; padding-left: 12px;">\1</h4>', html, flags=re.MULTILINE)
     html = re.sub(r'^### (.+)$', r'<h3 style="color: #2c3e50; font-size: 22px; font-weight: 600; margin: 28px 0 15px 0; line-height: 1.4; border-left: 4px solid #3498db; padding-left: 15px;">\1</h3>', html, flags=re.MULTILINE)
     html = re.sub(r'^## (.+)$', r'<h2 style="color: #1a1a1a; font-size: 28px; font-weight: 700; margin: 35px 0 20px 0; padding-bottom: 12px; border-bottom: 3px solid #4CAF50; line-height: 1.3;">\1</h2>', html, flags=re.MULTILINE)
     html = re.sub(r'^# (.+)$', r'<h1 style="color: #1a1a1a; font-size: 32px; font-weight: 800; margin: 40px 0 25px 0;">\1</h1>', html, flags=re.MULTILINE)
     
-    # Convert bold with accent color
+    # Convert bold text with special handling for bold labels followed by colons
+    # First, handle bold labels followed by colon (like "Blockchain Solution:") - make them stand out more
+    html = re.sub(r'\*\*([^*]+?):\*\*', r'<strong style="color: #2196F3; font-weight: 700; display: block; margin-top: 20px; margin-bottom: 8px; font-size: 18px;">\1:</strong>', html)
+    html = re.sub(r'__([^_]+?):__', r'<strong style="color: #2196F3; font-weight: 700; display: block; margin-top: 20px; margin-bottom: 8px; font-size: 18px;">\1:</strong>', html)
+    
+    # Then handle regular bold text
     html = re.sub(r'\*\*(.+?)\*\*', r'<strong style="color: #2196F3; font-weight: 600;">\1</strong>', html)
     html = re.sub(r'__(.+?)__', r'<strong style="color: #2196F3; font-weight: 600;">\1</strong>', html)
     
@@ -312,26 +321,62 @@ def convert_markdown_to_html(markdown_content):
     # Convert links with styling
     html = re.sub(r'\[(.+?)\]\((.+?)\)', r'<a href="\2" style="color: #3498db; text-decoration: none; border-bottom: 2px solid #3498db;">\1</a>', html)
     
-    # Convert bullet lists with better styling
+    # Convert lists (both bullet and numbered) with better styling
     lines = html.split('\n')
-    in_list = False
+    in_bullet_list = False
+    in_numbered_list = False
     result = []
     
     for line in lines:
-        if line.strip().startswith('- ') or line.strip().startswith('* '):
-            if not in_list:
+        stripped = line.strip()
+        
+        # Check for bullet list items
+        if stripped.startswith('- ') or stripped.startswith('* '):
+            # Close numbered list if open
+            if in_numbered_list:
+                result.append('</ol>')
+                in_numbered_list = False
+            
+            # Open bullet list if not open
+            if not in_bullet_list:
                 result.append('<ul style="margin: 20px 0; padding-left: 35px; line-height: 1.9;">')
-                in_list = True
-            item = line.strip()[2:]
+                in_bullet_list = True
+            
+            item = stripped[2:]
             result.append(f'<li style="margin: 10px 0; color: #444; font-size: 17px; list-style-type: disc;">{item}</li>')
-        else:
-            if in_list:
+        
+        # Check for numbered list items (1., 2., 3., etc.)
+        elif re.match(r'^\d+\.\s+', stripped):
+            # Close bullet list if open
+            if in_bullet_list:
                 result.append('</ul>')
-                in_list = False
+                in_bullet_list = False
+            
+            # Open numbered list if not open
+            if not in_numbered_list:
+                result.append('<ol style="margin: 20px 0; padding-left: 35px; line-height: 1.9;">')
+                in_numbered_list = True
+            
+            # Extract the item content after the number and period
+            item = re.sub(r'^\d+\.\s+', '', stripped)
+            result.append(f'<li style="margin: 10px 0; color: #444; font-size: 17px;">{item}</li>')
+        
+        else:
+            # Close any open list
+            if in_bullet_list:
+                result.append('</ul>')
+                in_bullet_list = False
+            if in_numbered_list:
+                result.append('</ol>')
+                in_numbered_list = False
+            
             result.append(line)
     
-    if in_list:
+    # Close any remaining open lists
+    if in_bullet_list:
         result.append('</ul>')
+    if in_numbered_list:
+        result.append('</ol>')
     
     html = '\n'.join(result)
     
