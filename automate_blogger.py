@@ -175,6 +175,47 @@ Requirements:
 15. DO NOT USE EMOJIS - write professionally without emoji characters
 16. Focus on cryptocurrency and blockchain technology
 17. Category: {category}
+18. USE VISUAL ENHANCEMENTS naturally when they add value (don't overuse - 2-4 per article maximum)
+
+Visual Enhancement Syntax (use sparingly and naturally):
+
+A) Info Boxes - Use [TIP], [WARNING], [BEST_PRACTICE], or [KEY_TAKEAWAY] on a line by itself, followed by the content:
+   [TIP]
+   Always enable two-factor authentication on exchange accounts for enhanced security.
+
+B) Comparison Tables - Use standard markdown tables with | separators:
+   | Feature | Bitcoin | Ethereum |
+   |---------|---------|----------|
+   | Speed | 10 min | 15 sec |
+
+C) Code Examples - Use standard code blocks with triple backticks:
+   ```javascript
+   const wallet = getWalletBalance(address);
+   ```
+
+D) Timeline - Use [TIMELINE] followed by bullet points with Year/Event format:
+   [TIMELINE]
+   - 2009: Bitcoin Launch - First cryptocurrency created
+   - 2015: Ethereum Emerges - Smart contracts introduced
+
+E) Pros & Cons - Use [PROS] and [CONS] sections with bullet points:
+   [PROS]
+   - Complete control over your funds
+   - Lower transaction fees
+   
+   [CONS]
+   - High price volatility
+   - Regulatory uncertainty
+
+F) FAQ - Use [FAQ] followed by Q: and A: format:
+   [FAQ]
+   Q: What is the best cryptocurrency for beginners?
+   A: Bitcoin and Ethereum are recommended for beginners due to their stability and extensive resources.
+   
+   Q: How much money do I need to start?
+   A: You can start with as little as $10-$50 on most exchanges.
+
+IMPORTANT: Use these enhancements ONLY where they genuinely add value. Not every article needs all of them. Use 2-4 maximum per article.
 
 Structure (aim for 1500-2000 words total):
 - Opening Story/Hook (grab attention with a real scenario or surprising fact)
@@ -291,10 +332,221 @@ Make sure to write a proper conclusion. Format in Markdown. Continue:"""
 
 
 def convert_markdown_to_html(markdown_content):
-    """Convert Markdown to beautifully styled HTML for Blogger"""
+    """Convert Markdown to beautifully styled HTML for Blogger with visual enhancements"""
     import re
     
     html = markdown_content
+    
+    # ==================== PHASE 1: PROCESS BLOCK ELEMENTS (ENHANCEMENTS) ====================
+    # CRITICAL: Process in correct order to avoid conflicts!
+    # 1. CODE BLOCKS (first - protect from all other processing with placeholders)
+    # 2. INFO BOXES
+    # 3. TABLES
+    # 4. PROS/CONS (before timeline - both use bullets)
+    # 5. FAQ (before timeline)
+    # 6. TIMELINE (last - most general bullet pattern)
+    
+    # ENHANCEMENT #7: Code Examples - PROCESS FIRST with placeholder protection
+    code_pattern = r'```(\w*)\n(.*?)```'
+    code_blocks = {}
+    code_counter = 0
+    
+    def convert_code(match):
+        nonlocal code_counter
+        lang = match.group(1) or 'code'
+        code = match.group(2).strip()
+        
+        # Escape HTML
+        code = code.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        
+        code_html = '<div style="background: #1e1e1e; padding: 25px; border-radius: 4px; margin: 25px 0; overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">'
+        code_html += f'<div style="color: #d4d4d4; font-family: \'Consolas\', \'Monaco\', \'Courier New\', monospace; font-size: 14px; line-height: 1.6; white-space: pre;">{code}</div>'
+        code_html += '</div>'
+        
+        # Store code block with unique placeholder (using HTML comment to avoid markdown processing)
+        placeholder = f'<!--CODEBLOCK{code_counter}-->'
+        code_blocks[placeholder] = code_html
+        code_counter += 1
+        
+        return placeholder
+    
+    html = re.sub(code_pattern, convert_code, html, flags=re.DOTALL)
+    
+    # ENHANCEMENT #1: Info Boxes (4 types with theme colors)
+    # [TIP] - Gold theme color (#ffcd04)
+    html = re.sub(
+        r'\[TIP\]\n([^\[]+?)(?=\n\n|\n\[|$)',
+        r'<div style="background: linear-gradient(135deg, #fff9e6 0%, #fff4d1 100%); border-left: 5px solid #ffcd04; padding: 20px; margin: 25px 0; border-radius: 4px; box-shadow: 0 2px 6px rgba(255, 205, 4, 0.15);"><div style="display: flex; align-items: flex-start; gap: 15px; flex-wrap: wrap;"><div style="font-size: 28px; flex-shrink: 0;">💡</div><div style="flex: 1; min-width: 200px;"><strong style="color: #253137; font-size: 18px; display: block; margin-bottom: 8px; font-weight: 600;">Pro Tip</strong><p style="margin: 0; color: #656565; line-height: 1.7;">\1</p></div></div></div>',
+        html, flags=re.MULTILINE | re.DOTALL
+    )
+    
+    # [WARNING] - Orange/Red
+    html = re.sub(
+        r'\[WARNING\]\n([^\[]+?)(?=\n\n|\n\[|$)',
+        r'<div style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-left: 5px solid #ff9800; padding: 20px; margin: 25px 0; border-radius: 4px; box-shadow: 0 2px 6px rgba(255, 152, 0, 0.15);"><div style="display: flex; align-items: flex-start; gap: 15px; flex-wrap: wrap;"><div style="font-size: 28px; flex-shrink: 0;">⚠️</div><div style="flex: 1; min-width: 200px;"><strong style="color: #e65100; font-size: 18px; display: block; margin-bottom: 8px; font-weight: 600;">Warning</strong><p style="margin: 0; color: #656565; line-height: 1.7;">\1</p></div></div></div>',
+        html, flags=re.MULTILINE | re.DOTALL
+    )
+    
+    # [BEST_PRACTICE] - Green
+    html = re.sub(
+        r'\[BEST_PRACTICE\]\n([^\[]+?)(?=\n\n|\n\[|$)',
+        r'<div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-left: 5px solid #4CAF50; padding: 20px; margin: 25px 0; border-radius: 4px; box-shadow: 0 2px 6px rgba(76, 175, 80, 0.15);"><div style="display: flex; align-items: flex-start; gap: 15px; flex-wrap: wrap;"><div style="font-size: 28px; flex-shrink: 0;">✅</div><div style="flex: 1; min-width: 200px;"><strong style="color: #2e7d32; font-size: 18px; display: block; margin-bottom: 8px; font-weight: 600;">Best Practice</strong><p style="margin: 0; color: #656565; line-height: 1.7;">\1</p></div></div></div>',
+        html, flags=re.MULTILINE | re.DOTALL
+    )
+    
+    # [KEY_TAKEAWAY] - Navy theme color (#253137)
+    html = re.sub(
+        r'\[KEY_TAKEAWAY\]\n([^\[]+?)(?=\n\n|\n\[|$)',
+        r'<div style="background: linear-gradient(135deg, #e8eaf1 0%, #d4d8e6 100%); border-left: 5px solid #253137; padding: 20px; margin: 25px 0; border-radius: 4px; box-shadow: 0 2px 6px rgba(37, 49, 55, 0.15);"><div style="display: flex; align-items: flex-start; gap: 15px; flex-wrap: wrap;"><div style="font-size: 28px; flex-shrink: 0;">🔑</div><div style="flex: 1; min-width: 200px;"><strong style="color: #253137; font-size: 18px; display: block; margin-bottom: 8px; font-weight: 600;">Key Takeaway</strong><p style="margin: 0; color: #656565; line-height: 1.7;">\1</p></div></div></div>',
+        html, flags=re.MULTILINE | re.DOTALL
+    )
+    
+    # ENHANCEMENT #3: Comparison Tables (convert markdown tables)
+    # Convert markdown tables to HTML tables with theme styling
+    table_pattern = r'(\|.+\|\n\|[-:\s|]+\|\n(?:\|.+\|\n?)+)'
+    
+    def convert_table(match):
+        table_md = match.group(1)
+        lines = [line.strip() for line in table_md.split('\n') if line.strip()]
+        
+        if len(lines) < 2:
+            return match.group(0)
+        
+        # Parse header
+        header = [cell.strip() for cell in lines[0].split('|')[1:-1]]
+        # Skip separator line (lines[1])
+        # Parse data rows
+        rows = [[cell.strip() for cell in line.split('|')[1:-1]] for line in lines[2:]]
+        
+        # Build HTML table with theme colors
+        table_html = '<div style="overflow-x: auto; margin: 25px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 4px;">'
+        table_html += '<table style="width: 100%; border-collapse: collapse; background: white; border-radius: 4px; overflow: hidden;">'
+        
+        # Header with gold gradient
+        table_html += '<thead><tr style="background: linear-gradient(135deg, #ffcd04 0%, #ffc107 100%); color: #253137;">'
+        for i, cell in enumerate(header):
+            border = ' border-right: 1px solid rgba(37,49,55,0.1);' if i < len(header) - 1 else ''
+            table_html += f'<th style="padding: 18px; text-align: left; font-weight: 600; font-size: 15px;{border}">{cell}</th>'
+        table_html += '</tr></thead>'
+        
+        # Body rows
+        table_html += '<tbody>'
+        for idx, row in enumerate(rows):
+            bg = ' background: #fafafa;' if idx % 2 == 1 else ''
+            table_html += f'<tr style="border-bottom: 1px solid #f2f2f6;{bg}">'
+            for i, cell in enumerate(row):
+                border = ' border-right: 1px solid #f2f2f6;' if i < len(row) - 1 else ''
+                align = ' text-align: center;' if i > 0 else ''
+                weight = ' font-weight: 500;' if i == 0 else ''
+                color = ' color: #253137;' if i == 0 else ' color: #656565;'
+                table_html += f'<td style="padding: 15px;{align}{weight}{color}{border}">{cell}</td>'
+            table_html += '</tr>'
+        table_html += '</tbody></table></div>'
+        
+        return table_html
+    
+    html = re.sub(table_pattern, convert_table, html, flags=re.MULTILINE)
+    
+    # ENHANCEMENT #9: Pros & Cons Layout - BEFORE Timeline (both use bullets)
+    # Match only consecutive bullet lines, stop at blank line or new section
+    proscons_pattern = r'\[PROS\]\n((?:- [^\n]+\n?)+?)\n+\[CONS\]\n((?:- [^\n]+\n?)+?)(?=\n\n|\n##|\n\[|$)'
+    
+    def convert_proscons(match):
+        pros = [line.strip()[2:] for line in match.group(1).strip().split('\n') if line.strip().startswith('- ')]
+        cons = [line.strip()[2:] for line in match.group(2).strip().split('\n') if line.strip().startswith('- ')]
+        
+        pc_html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 25px 0;">'
+        
+        # Pros (Green)
+        pc_html += '<div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-radius: 4px; padding: 25px; box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);">'
+        pc_html += '<h3 style="color: #2e7d32; font-size: 20px; margin: 0 0 20px 0; display: flex; align-items: center; gap: 10px;"><span style="font-size: 24px;">✅</span> Advantages</h3>'
+        pc_html += '<ul style="list-style: none; padding: 0; margin: 0;">'
+        for idx, pro in enumerate(pros):
+            border = ' border-bottom: 1px solid rgba(46, 125, 50, 0.2);' if idx < len(pros) - 1 else ''
+            pc_html += f'<li style="padding: 10px 0;{border} display: flex; align-items: flex-start; gap: 10px;"><span style="color: #4CAF50; font-size: 18px; font-weight: bold;">✓</span><span style="color: #656565; line-height: 1.6;">{pro}</span></li>'
+        pc_html += '</ul></div>'
+        
+        # Cons (Red)
+        pc_html += '<div style="background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); border-radius: 4px; padding: 25px; box-shadow: 0 2px 8px rgba(244, 67, 54, 0.15);">'
+        pc_html += '<h3 style="color: #c62828; font-size: 20px; margin: 0 0 20px 0; display: flex; align-items: center; gap: 10px;"><span style="font-size: 24px;">❌</span> Disadvantages</h3>'
+        pc_html += '<ul style="list-style: none; padding: 0; margin: 0;">'
+        for idx, con in enumerate(cons):
+            border = ' border-bottom: 1px solid rgba(198, 40, 40, 0.2);' if idx < len(cons) - 1 else ''
+            pc_html += f'<li style="padding: 10px 0;{border} display: flex; align-items: flex-start; gap: 10px;"><span style="color: #f44336; font-size: 18px; font-weight: bold;">✗</span><span style="color: #656565; line-height: 1.6;">{con}</span></li>'
+        pc_html += '</ul></div>'
+        
+        pc_html += '</div>'
+        return pc_html
+    
+    html = re.sub(proscons_pattern, convert_proscons, html, flags=re.MULTILINE | re.DOTALL)
+    
+    # ENHANCEMENT #12: FAQ Section - BEFORE Timeline  
+    # Match all content after [FAQ] until next section heading or enhancement tag
+    faq_pattern = r'\[FAQ\]\n((?:(?!\n##|\[PROS\]|\[CONS\]|\[TIMELINE\]).)+)'
+    
+    def convert_faq(match):
+        faq_text = match.group(1).strip()
+        # Match Q&A pairs - answers can be multi-line until next Q or end
+        qa_pattern = r'Q: (.+?)\nA: (.*?)(?=\n\nQ:|$)'
+        qa_pairs = re.findall(qa_pattern, faq_text, re.DOTALL)
+        
+        colors = ['#ffcd04', '#4CAF50', '#253137']  # Rotate icon colors
+        
+        faq_html = '<div style="margin: 25px 0;">'
+        for idx, (question, answer) in enumerate(qa_pairs):
+            color = colors[idx % len(colors)]
+            margin = ' margin-bottom: 15px;' if idx < len(qa_pairs) - 1 else ''
+            
+            faq_html += f'<div style="background: white; border: 2px solid #f2f2f6; border-radius: 4px; padding: 20px;{margin} box-shadow: 0 2px 4px rgba(0,0,0,0.03);">'
+            faq_html += '<div style="display: flex; align-items: flex-start; gap: 15px; flex-wrap: wrap;">'
+            faq_html += f'<div style="font-size: 24px; color: {color}; flex-shrink: 0;">❓</div>'
+            faq_html += '<div style="flex: 1; min-width: 200px;">'
+            faq_html += f'<strong style="color: #253137; font-size: 18px; display: block; margin-bottom: 10px; font-weight: 600;">{question.strip()}</strong>'
+            faq_html += f'<p style="color: #656565; line-height: 1.7; margin: 0;">{answer.strip()}</p>'
+            faq_html += '</div></div></div>'
+        
+        faq_html += '</div>'
+        return faq_html
+    
+    html = re.sub(faq_pattern, convert_faq, html, flags=re.MULTILINE | re.DOTALL)
+    
+    # ENHANCEMENT #8: Timeline (visual progress indicator) - LAST, after PROS/CONS and FAQ
+    # Match only consecutive lines starting with - , stop at blank line or new section
+    timeline_pattern = r'\[TIMELINE\]\n((?:- [^\n]+\n?)+?)(?=\n\n|\n##|\n\[|$)'
+    
+    def convert_timeline(match):
+        items = [line.strip()[2:] for line in match.group(1).strip().split('\n') if line.strip().startswith('- ')]
+        
+        colors = ['#ffcd04', '#4CAF50', '#253137']  # Theme colors rotation
+        bg_colors = ['#fff9e6', '#e8f5e9', '#e8eaf1']
+        
+        timeline_html = '<div style="position: relative; padding: 30px 0 30px 40px; margin: 25px 0;">'
+        timeline_html += '<div style="position: absolute; left: 15px; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, #ffcd04 0%, #4CAF50 50%, #253137 100%);"></div>'
+        
+        for idx, item in enumerate(items):
+            color = colors[idx % len(colors)]
+            bg_color = bg_colors[idx % len(bg_colors)]
+            
+            # Parse title and description
+            parts = item.split(' - ', 1)
+            title = parts[0] if len(parts) > 0 else item
+            desc = parts[1] if len(parts) > 1 else ''
+            
+            margin = ' margin-bottom: 40px;' if idx < len(items) - 1 else ''
+            timeline_html += f'<div style="position: relative;{margin}">'
+            timeline_html += f'<div style="position: absolute; left: -32px; width: 20px; height: 20px; background: {color}; border: 4px solid white; border-radius: 50%; box-shadow: 0 0 0 3px {bg_color};"></div>'
+            timeline_html += f'<div style="background: white; padding: 20px; border-radius: 4px; border: 2px solid {bg_color}; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">'
+            timeline_html += f'<strong style="color: {color}; font-size: 18px; display: block; margin-bottom: 5px;">{title}</strong>'
+            if desc:
+                timeline_html += f'<p style="color: #656565; margin: 0; line-height: 1.6;">{desc}</p>'
+            timeline_html += '</div></div>'
+        
+        timeline_html += '</div>'
+        return timeline_html
+    
+    html = re.sub(timeline_pattern, convert_timeline, html, flags=re.MULTILINE | re.DOTALL)
+    
+    # ==================== PHASE 2: PROCESS STANDARD MARKDOWN ====================
     
     # Convert headers with attractive styling (from h1 to h6 for complete support)
     # Process from most specific (most #) to least specific (fewest #) to avoid conflicts
@@ -392,6 +644,11 @@ def convert_markdown_to_html(markdown_content):
             html_paragraphs.append(para)
     
     html_content = '\n\n'.join(html_paragraphs)
+    
+    # ==================== PHASE 3: RESTORE CODE BLOCKS ====================
+    # Replace placeholders with actual code block HTML (after all markdown processing)
+    for placeholder, code_html in code_blocks.items():
+        html_content = html_content.replace(placeholder, code_html)
     
     # Wrap in a container div for consistent styling
     return f'<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; max-width: 100%; padding: 0;">{html_content}</div>'
