@@ -505,7 +505,7 @@ def convert_markdown_to_html(markdown_content):
         pc_html += '<ul style="list-style: none; padding: 0; margin: 0;">'
         for idx, pro in enumerate(pros):
             border = ' border-bottom: 1px solid rgba(46, 125, 50, 0.2);' if idx < len(pros) - 1 else ''
-            pc_html += f'<li style="padding: 10px 0;{border} display: flex; align-items: flex-start; gap: 10px;"><span style="color: #4CAF50; font-size: 18px; font-weight: bold;">✓</span><span style="color: #656565; line-height: 1.6;">{pro}</span></li>'
+            pc_html += f'<li style="list-style-type: none; padding: 10px 0;{border} display: flex; align-items: flex-start; gap: 10px;"><span style="color: #4CAF50; font-size: 18px; font-weight: bold;">✓</span><span style="color: #656565; line-height: 1.6;">{pro}</span></li>'
         pc_html += '</ul></div>'
         
         # Cons (Red)
@@ -514,7 +514,7 @@ def convert_markdown_to_html(markdown_content):
         pc_html += '<ul style="list-style: none; padding: 0; margin: 0;">'
         for idx, con in enumerate(cons):
             border = ' border-bottom: 1px solid rgba(198, 40, 40, 0.2);' if idx < len(cons) - 1 else ''
-            pc_html += f'<li style="padding: 10px 0;{border} display: flex; align-items: flex-start; gap: 10px;"><span style="color: #f44336; font-size: 18px; font-weight: bold;">✗</span><span style="color: #656565; line-height: 1.6;">{con}</span></li>'
+            pc_html += f'<li style="list-style-type: none; padding: 10px 0;{border} display: flex; align-items: flex-start; gap: 10px;"><span style="color: #f44336; font-size: 18px; font-weight: bold;">✗</span><span style="color: #656565; line-height: 1.6;">{con}</span></li>'
         pc_html += '</ul></div>'
         
         pc_html += '</div>'
