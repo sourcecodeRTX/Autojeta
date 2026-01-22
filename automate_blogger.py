@@ -37,16 +37,14 @@ TOPICS_FILE = 'topics.txt'
 STATUS_FILE = 'status.json'
 IMAGE_DIR = 'images'
 
-# Categories for Blogger labels
+# Categories for Blogger labels (Fixed to user request)
 CATEGORIES = [
     'Beginner Guide',
     'Crypto Investment',
     'News and Updates',
     'Tools & Tutorials',
     'Crypto Airdrops',
-    'Blockchain Technology',
-    'DeFi',
-    'NFTs'
+    'Blockchain Technology'
 ]
 
 # ==================== HELPER FUNCTIONS ====================
@@ -151,6 +149,7 @@ def generate_blog_content(client, topic, details, category):
     """Generate blog post content using Gemini AI"""
     print(f"Generating content for: {topic}")
     
+    # Restored original detailed prompt structure with inserted SEO/Length constraints
     prompt = f"""You are an expert cryptocurrency and blockchain content writer for the blog "Crypto Basic Guide" (cryptobasicguide.blogspot.com).
 
 Write a comprehensive, detailed, narrative-driven blog post about: {topic}
@@ -158,28 +157,31 @@ Write a comprehensive, detailed, narrative-driven blog post about: {topic}
 Additional Context: {details if details else 'Provide comprehensive coverage of the topic'}
 
 Requirements:
-1. Write a DETAILED, informative article (1500-2000 words) - make it comprehensive and valuable
-2. Use a NARRATIVE, STORYTELLING approach - tell a story, don't just list facts
-3. Write like you're having a conversation with a friend - engaging, personal, relatable
-4. Use clear headings and subheadings (## for main sections, ### for subsections)
-5. Include real-world scenarios, case studies, and relatable examples
-6. Start with a compelling hook or story that draws readers in
-7. Use analogies and metaphors to explain complex concepts
-8. Add personal insights, opinions, and expert perspectives
-9. Include step-by-step walkthroughs where appropriate
-10. Discuss both benefits and risks honestly
-11. Share practical tips from real-world experience
-12. Include current trends, market movements, and future predictions
-13. Explain technical terms naturally within the narrative
-14. Add context about why this matters to readers personally
-15. DO NOT USE EMOJIS - write professionally without emoji characters
-16. Focus on cryptocurrency and blockchain technology
-17. Category: {category}
+1. Write a DETAILED, informative article (900-1000 words) - precise and valuable.
+2. Use a NARRATIVE, STORYTELLING approach - tell a story, don't just list facts.
+3. Write like you're having a conversation with a friend - engaging, personal, relatable.
+4. Use clear headings and subheadings (## for main sections, ### for subsections).
+5. Include real-world scenarios, case studies, and relatable examples.
+6. Start with a compelling hook or story that draws readers in.
+7. Use analogies and metaphors to explain complex concepts.
+8. Add personal insights, opinions, and expert perspectives.
+9. Include step-by-step walkthroughs where appropriate.
+10. Discuss both benefits and risks honestly.
+11. Share practical tips from real-world experience.
+12. Include current trends, market movements, and future predictions.
+13. Explain technical terms naturally within the narrative.
+14. Add context about why this matters to readers personally.
+15. DO NOT USE EMOJIS - write professionally without emoji characters.
+16. Focus on cryptocurrency and blockchain technology.
+17. SEO OPTIMIZATION: Identify high-ranking keywords based on Google Trends for this topic and integrate them naturally into the title, headers, and first paragraph. Use LSI (latent semantic) keywords throughout.
+18. USER FRIENDLY TONE: Ensure the reading flow is natural and NOT awkward or robotic. Short paragraphs, punchy sentences.
+19. Category: {category}
 
-Structure (aim for 1500-2000 words total):
+Structure (aim for 900-1000 words total):
+- SEO Title (Include main keyword)
 - Opening Story/Hook (grab attention with a real scenario or surprising fact)
-- Introduction (2-3 paragraphs setting the scene and explaining importance)
-- Main narrative with 4-6 detailed sections:
+- Introduction (2-3 paragraphs setting the scene and explaining importance + SEO keywords)
+- Main narrative with 4-5 detailed sections:
   * Each section should flow naturally from the previous one
   * Use transitions and connecting phrases
   * Include examples, scenarios, and real-world applications
@@ -195,6 +197,7 @@ Tone:
 - Honest about both opportunities and risks
 - Confident but not overconfident
 - Avoid hype and unrealistic promises
+- NO awkward or robotic phrasing
 
 DO NOT INCLUDE:
 - Emojis or emoji characters of any kind
@@ -206,7 +209,7 @@ Format the content in Markdown with proper headings.
 
 IMPORTANT: Generate the COMPLETE article from start to finish. Do not stop mid-way. Write all sections including the conclusion. The article must be complete and end with a proper conclusion.
 
-Generate the comprehensive, narrative-driven content (1500-2000 words):"""
+Generate the comprehensive, SEO-optimized, narrative-driven content (900-1000 words):"""
 
     max_retries = 3
     retry_delay = 5
@@ -217,8 +220,8 @@ Generate the comprehensive, narrative-driven content (1500-2000 words):"""
                 model='gemini-2.5-flash',
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    temperature=0.8,
-                    max_output_tokens=8192,  # Increased from 4096 to support longer content
+                    temperature=0.75, # Slightly reduced for better SEO focus
+                    max_output_tokens=8192,
                 )
             )
             
@@ -233,10 +236,10 @@ Generate the comprehensive, narrative-driven content (1500-2000 words):"""
             if not content or len(content) < 100:
                 raise ValueError("Generated content too short")
             
-            # Check if content appears truncated (incomplete)
+            # Check if content appears truncated (Adjusted for 900-1000 words)
             is_truncated = (
                 not content.rstrip().endswith(('.', '!', '?', '"', "'"))  # Doesn't end with punctuation
-                or len(content) < 1000  # Too short for requested 1500-2000 words
+                or len(content) < 2000  # Adjusted length check for ~900 words
                 or content.count('##') < 3  # Missing expected sections
             )
             
@@ -246,11 +249,11 @@ Generate the comprehensive, narrative-driven content (1500-2000 words):"""
                 # Try to continue from where it left off
                 continuation_prompt = f"""Continue writing the blog post from where you left off. Here's what was written so far:
 
-{content}
+{content[-500:]}
 
 ---
 
-Continue writing naturally from the point where it was cut off. Complete all remaining sections including:
+Continue writing naturally from the point where it was cut off. Ensure the tone remains user-friendly and natural. Complete all remaining sections including:
 - Any incomplete sections
 - Practical guidance section
 - Common mistakes and how to avoid them
@@ -263,7 +266,7 @@ Make sure to write a proper conclusion. Format in Markdown. Continue:"""
                     model='gemini-2.5-flash',
                     contents=continuation_prompt,
                     config=types.GenerateContentConfig(
-                        temperature=0.8,
+                        temperature=0.75,
                         max_output_tokens=4096,
                     )
                 )
@@ -455,15 +458,7 @@ Return ONLY the search query (2-3 words), nothing else."""
 
 
 def get_unsplash_image(topic, used_images=None):
-    """Download image from Unsplash with deduplication and random selection
-    
-    Args:
-        topic: The blog topic for image search
-        used_images: List of previously used image URLs to avoid duplicates
-    
-    Returns:
-        Dict with image data and URL for tracking, or None
-    """
+    """Download image from Unsplash with deduplication and random selection"""
     if not UNSPLASH_ACCESS_KEY:
         print("Warning: UNSPLASH_ACCESS_KEY not set, skipping image")
         return None
@@ -761,7 +756,7 @@ def main():
     print()
     
     # Generate content
-    print("Step 1: Generating blog content...")
+    print("Step 1: Generating SEO-optimized blog content...")
     content = generate_blog_content(client, topic, details, category)
     
     if not content:
@@ -825,7 +820,7 @@ def main():
     # Publish to Blogger
     print("Step 4: Publishing to Blogger...")
     title = topic  # Use only the topic as title, without day prefix
-    labels = [category, "Cryptocurrency", "Blockchain"]
+    labels = [category] # Uses only the selected category from your specific list
     
     success = publish_to_blogger(title, content_html, labels, image_url)
     
@@ -875,4 +870,3 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
         exit(1)
-
