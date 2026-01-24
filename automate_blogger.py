@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 """
-Blogger Post Automation Script
-Automates cryptocurrency blog posts using Google Gemini AI and Unsplash API
+Blogger Post Automation Script with AI Image Generation
+Automates cryptocurrency blog posts using Google Gemini AI and Hugging Face FLUX.1
 Publishes directly to Blogger via Blogger API v3
+
+KEY FEATURES:
+- Uses FLUX.1-dev model for photorealistic image generation
+- NO text rendered on images (configured via prompt engineering)
+- Maintains all existing functionality from original script
+- Generates images specifically tailored to blog content
 """
 
 import os
@@ -16,12 +22,13 @@ from io import BytesIO
 from PIL import Image
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request as AuthRequest
+from huggingface_hub import InferenceClient
 
 # ==================== CONFIGURATION ====================
 
 # API Keys (Set these as environment variables)
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-UNSPLASH_ACCESS_KEY = os.environ.get('UNSPLASH_ACCESS_KEY', '')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')  # Required for content generation
+HF_TOKEN = os.environ.get('HF_TOKEN', '')  # Required for FLUX.1 image generation
 
 # Blogger OAuth Configuration
 BLOGGER_CLIENT_ID = os.environ.get('BLOGGER_CLIENT_ID', '')
@@ -395,159 +402,151 @@ def convert_markdown_to_html(markdown_content):
     return f'<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; max-width: 100%; padding: 0;">{html_content}</div>'
 
 
-# ==================== IMAGE HANDLING ====================
+# ==================== AI IMAGE GENERATION ====================
 
-def generate_image_search_query(client, topic):
-    """Generate specific 2-3 word Unsplash search query using Gemini AI"""
-    prompt = f"""Generate a SPECIFIC search query for Unsplash (2-3 words) to find a professional cryptocurrency image.
+def generate_image_prompt(client, topic):
+    """
+    Generate a detailed text-to-image prompt using Gemini AI.
+    CRITICAL: Instructs the AI to create photorealistic images WITHOUT any text.
+    """
+    prompt = f"""You are an expert AI art director specializing in photorealistic cryptocurrency and blockchain imagery.
 
-TOPIC: {topic}
+Generate a detailed text-to-image prompt for a blog post about: {topic}
 
-Requirements:
-- Generate 2-3 SPECIFIC words (not just 1 generic word like "security" or "technology")
-- Focus on visual elements: coins, technology, charts, digital assets, blockchain visuals
-- Make the query unique enough to get different image results
-- Avoid overly generic single-word queries
+CRITICAL REQUIREMENTS:
+1. **ABSOLUTELY NO TEXT OR WORDS** in the image - no labels, no ticker symbols, no writing of any kind
+2. Focus on PURE VISUAL ELEMENTS: physical objects, lighting, textures, composition
+3. Theme: Cryptocurrency, Blockchain, Digital Finance, Futuristic Technology
+4. Style: Photorealistic, Cinematic, Professional Editorial Photography
+5. Quality: 8k resolution, highly detailed, Unreal Engine 5 rendering quality
 
-Examples of GOOD queries (2-3 specific words):
-- "bitcoin gold coin" (NOT just "bitcoin")
-- "ethereum blockchain network" (NOT just "ethereum")
-- "cryptocurrency trading chart" (NOT just "trading")
-- "digital wallet security" (NOT just "security")
-- "blockchain data network" (NOT just "blockchain")
+VISUAL ELEMENTS TO INCLUDE:
+- Physical crypto coins (gold, silver, metallic textures)
+- Circuit boards, motherboards, digital technology
+- Glowing effects, neon lights, holographic displays
+- Professional studio lighting with depth of field
+- Futuristic backgrounds (digital networks, abstract tech patterns)
+- Clean, sleek, modern aesthetic
 
-Examples of BAD queries (too generic):
-- "security" ❌
-- "technology" ❌
-- "crypto" ❌
-- "blockchain" ❌
+AVOID:
+- ANY text, letters, numbers, ticker symbols (Bitcoin, ETH, etc.)
+- Computer screens with visible text
+- Charts or graphs with labels
+- Newspapers or documents with readable text
+- Any form of written content
 
-Return ONLY the search query (2-3 words), nothing else."""
+Example Good Prompts:
+- "A close-up macro shot of a golden physical Bitcoin coin resting on a glowing blue motherboard with intricate circuitry, cinematic lighting, depth of field, 8k resolution, highly detailed metal texture, professional product photography"
+- "Multiple metallic cryptocurrency coins scattered on a dark reflective surface with neon blue and purple rim lighting, futuristic digital bokeh background, photorealistic, cinematic composition, 8k detail"
+- "A sleek golden coin with circuit board patterns floating above a glowing digital network grid, volumetric lighting, photorealistic 3D render, depth of field, cinematic mood, 8k resolution"
+
+Based on the topic "{topic}", generate ONE detailed prompt (50-80 words) that describes the visual scene in vivid detail.
+
+Return ONLY the prompt string, nothing else:"""
 
     try:
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
-                temperature=0.7,
-                max_output_tokens=20,
+                temperature=0.8,
+                max_output_tokens=150,
             )
         )
+        image_prompt = response.text.strip().strip('"').strip("'")
         
-        query = response.text.strip().strip('"').strip("'").strip().lower()
-        # Ensure query is 2-3 words (optimal for specific searches)
-        words = query.split()
-        if len(words) > 3:
-            query = ' '.join(words[:3])
-        elif len(words) < 2:
-            query = f"{query} cryptocurrency"
+        # Additional safety check: ensure no text-related keywords in prompt
+        text_keywords = ['text', 'label', 'writing', 'words', 'letters', 'ticker', 'symbol', 'BTC', 'ETH']
+        for keyword in text_keywords:
+            if keyword.lower() in image_prompt.lower():
+                # Remove problematic phrases
+                image_prompt = image_prompt.replace(keyword, '')
         
-        print(f"🔍 Generated specific image query: '{query}' (2-3 words)")
-        return query
+        # Add explicit "no text" instruction to the prompt
+        image_prompt = f"{image_prompt.strip()}, absolutely no text or writing visible, clean composition"
+        
+        print(f"🎨 Generated Image Prompt: '{image_prompt[:80]}...'")
+        return image_prompt
         
     except Exception as e:
-        print(f"Error generating image query: {e}")
-        # Fallback to topic-based keywords
-        topic_lower = topic.lower()
-        if 'bitcoin' in topic_lower:
-            return "bitcoin cryptocurrency"
-        elif 'ethereum' in topic_lower:
-            return "ethereum blockchain"
-        else:
-            return "cryptocurrency blockchain"
+        print(f"Error generating image prompt: {e}")
+        # Safe fallback prompt with no text
+        return f"A photorealistic 3D render of cryptocurrency technology concept related to {topic}, golden metallic coins on glowing circuit board, cinematic lighting, 8k resolution, no text visible, clean professional composition"
 
 
-def get_unsplash_image(topic, used_images=None):
-    """Download image from Unsplash with deduplication and random selection"""
-    if not UNSPLASH_ACCESS_KEY:
-        print("Warning: UNSPLASH_ACCESS_KEY not set, skipping image")
+def generate_image_from_hf(prompt, day):
+    """
+    Generate photorealistic image using Hugging Face FLUX.1-dev model.
+    
+    FLUX.1-dev is currently the state-of-the-art model for:
+    - Photorealism and detail
+    - Prompt adherence
+    - Complex technological textures
+    - Professional quality outputs
+    
+    Returns: Dictionary with image data and metadata, or None if failed
+    """
+    if not HF_TOKEN:
+        print("❌ Error: HF_TOKEN environment variable not set")
+        print("   Get your token from: https://huggingface.co/settings/tokens")
         return None
+
+    # FLUX.1-dev: Best quality, slower (25-30 steps)
+    # Alternative: "black-forest-labs/FLUX.1-schnell" - Faster, good quality (4-8 steps)
+    model_id = "black-forest-labs/FLUX.1-dev"
     
-    if used_images is None:
-        used_images = []
+    print(f"🎨 Generating AI image with {model_id}...")
+    print(f"📝 Prompt: {prompt[:100]}...")
     
-    max_retries = 2
-    
-    for attempt in range(max_retries):
-        try:
-            # Initialize Gemini client for query generation
-            client = initialize_apis()
-            search_query = generate_image_search_query(client, topic)
-            
-            url = "https://api.unsplash.com/search/photos"
-            headers = {"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"}
-            params = {
-                "query": search_query,
-                "orientation": "landscape",
-                "per_page": 10  # Get 10 results to randomly choose from
-            }
-            
-            response = requests.get(url, headers=headers, params=params, timeout=15)
-            response.raise_for_status()
-            
-            data = response.json()
-            
-            if data.get('results') and len(data['results']) > 0:
-                print(f"🔍 Total results from search: {len(data['results'])}")
-                
-                # Filter out already used images
-                available_photos = [
-                    photo for photo in data['results']
-                    if photo['urls']['regular'] not in used_images
-                ]
-                
-                print(f"🔍 Already used: {len(data['results']) - len(available_photos)}")
-                print(f"🔍 Available photos: {len(available_photos)}")
-                
-                if available_photos:
-                    # Randomly select from available options
-                    import random
-                    photo = random.choice(available_photos)
-                    
-                    image_url = photo['urls']['regular']  # This will be tracked
-                    photographer = photo['user']['name']
-                    photographer_url = photo['user']['links']['html']
-                    
-                    print(f"✅ Selected image by {photographer} (from {len(available_photos)} available)")
-                    
-                    # Download image
-                    img_response = requests.get(image_url, timeout=15)
-                    img_response.raise_for_status()
-                    
-                    return {
-                        'data': img_response.content,
-                        'photographer': photographer,
-                        'photographer_url': photographer_url,
-                        'unsplash_url': photo['links']['html'],
-                        'image_url': image_url  # Add URL for tracking
-                    }
-                else:
-                    print(f"⚠️ All {len(data['results'])} images from '{search_query}' have been used before")
-                    if attempt < max_retries - 1:
-                        # Fallback: try broader search with first word only
-                        fallback_query = search_query.split()[0] + " cryptocurrency"
-                        print(f"🔄 Trying fallback search: '{fallback_query}'")
-                        params["query"] = fallback_query
-                        
-                        response = requests.get(url, headers=headers, params=params, timeout=15)
-                        response.raise_for_status()
-                        data = response.json()
-                        continue
-                    return None
-            else:
-                print(f"No images found for query: {search_query}")
-                if attempt < max_retries - 1:
-                    # Try with fallback query
-                    search_query = "cryptocurrency blockchain"
-                    continue
-                return None
-                
-        except Exception as e:
-            print(f"Error fetching Unsplash image (attempt {attempt + 1}/{max_retries}): {e}")
-            if attempt < max_retries - 1:
-                time.sleep(3)
-            else:
-                return None
+    try:
+        client = InferenceClient(token=HF_TOKEN)
+        
+        # Generate the image with optimal FLUX.1 settings
+        image = client.text_to_image(
+            prompt,
+            model=model_id,
+            width=1024,      # Landscape aspect ratio
+            height=768,      # Standard blog image dimensions
+            guidance_scale=3.5,  # Lower guidance for FLUX = more realism
+            num_inference_steps=28  # 25-30 is sweet spot for quality/speed
+        )
+        
+        # Save to buffer for processing
+        output = BytesIO()
+        image.save(output, format='JPEG', quality=95)
+        
+        print("✅ Image generated successfully!")
+        print(f"   Size: {len(output.getvalue()) / 1024:.1f}KB")
+        
+        # Return structured data compatible with original workflow
+        return {
+            'data': output.getvalue(),
+            'photographer': 'AI Generation (FLUX.1-dev)',
+            'photographer_url': 'https://huggingface.co/black-forest-labs/FLUX.1-dev',
+            'unsplash_url': 'https://huggingface.co/',
+            'image_url': f'flux-generated-day-{day}'
+        }
+        
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ Error generating image: {error_msg}")
+        
+        # Provide helpful error messages
+        if "429" in error_msg or "rate" in error_msg.lower():
+            print("⚠️  Rate limit reached on Hugging Face.")
+            print("   Solutions:")
+            print("   1. Wait a few minutes and try again")
+            print("   2. Switch to FLUX.1-schnell (faster, free tier friendly)")
+            print("   3. Upgrade Hugging Face subscription for higher limits")
+        elif "401" in error_msg or "unauthorized" in error_msg.lower():
+            print("⚠️  Authentication failed. Check your HF_TOKEN:")
+            print("   - Ensure it's set correctly in environment variables")
+            print("   - Verify token is valid at https://huggingface.co/settings/tokens")
+        elif "timeout" in error_msg.lower():
+            print("⚠️  Request timed out. FLUX.1-dev can be slow on free tier.")
+            print("   Consider switching to FLUX.1-schnell for faster generation")
+        
+        return None
 
 
 def compress_image(image_data, max_size_kb=480):
@@ -582,7 +581,7 @@ def compress_image(image_data, max_size_kb=480):
         
         quality -= 5
     
-    print(f"Image compressed to {size_kb:.1f}KB (quality: {quality})")
+    print(f"📦 Image compressed to {size_kb:.1f}KB (quality: {quality})")
     return output.getvalue()
 
 
@@ -596,7 +595,7 @@ def save_image_locally(image_data, day):
     with open(filepath, 'wb') as f:
         f.write(image_data)
     
-    print(f"Image saved: {filepath}")
+    print(f"💾 Image saved: {filepath}")
     return filepath
 
 
@@ -659,7 +658,7 @@ def publish_to_blogger(title, content_html, labels, image_url=None):
                 "Content-Type": "application/json"
             }
             
-            print(f"Publishing to Blogger: {title} (attempt {attempt + 1}/{max_retries})")
+            print(f"📤 Publishing to Blogger: {title} (attempt {attempt + 1}/{max_retries})")
             response = requests.post(
                 BLOGGER_API_URL,
                 json=post_data,
@@ -672,32 +671,32 @@ def publish_to_blogger(title, content_html, labels, image_url=None):
             
             post_url = result.get('url', '')
             post_id = result.get('id', '')
-            print(f"✓ Post published successfully!")
-            print(f"  URL: {post_url}")
-            print(f"  Post ID: {post_id}")
+            print(f"✅ Post published successfully!")
+            print(f"   URL: {post_url}")
+            print(f"   Post ID: {post_id}")
             
             return True
             
         except requests.exceptions.HTTPError as e:
-            print(f"HTTP Error: {e}")
-            print(f"Status Code: {e.response.status_code}")
-            print(f"Response: {e.response.text}")
+            print(f"❌ HTTP Error: {e}")
+            print(f"   Status Code: {e.response.status_code}")
+            print(f"   Response: {e.response.text}")
             
             # Don't retry on client errors (4xx)
             if 400 <= e.response.status_code < 500:
-                print("Client error - not retrying")
+                print("   Client error - not retrying")
                 return False
             
             if attempt < max_retries - 1:
-                print(f"Retrying in {retry_delay} seconds...")
+                print(f"   Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
             else:
                 return False
                 
         except Exception as e:
-            print(f"Error publishing to Blogger: {e}")
+            print(f"❌ Error publishing to Blogger: {e}")
             if attempt < max_retries - 1:
-                print(f"Retrying in {retry_delay} seconds...")
+                print(f"   Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
             else:
                 return False
@@ -708,39 +707,55 @@ def publish_to_blogger(title, content_html, labels, image_url=None):
 # ==================== MAIN WORKFLOW ====================
 
 def main():
-    """Main automation workflow"""
-    print("=" * 60)
-    print("Crypto Basic Guide - Blog Automation")
-    print("=" * 60)
+    """Main automation workflow with AI image generation"""
+    print("=" * 70)
+    print("🚀 Crypto Basic Guide - Blog Automation with AI Images (FLUX.1)")
+    print("=" * 70)
     print()
     
     # Check environment variables
+    missing_vars = []
+    
     if not GEMINI_API_KEY:
-        print("Error: GEMINI_API_KEY environment variable not set")
-        print("Get your API key from: https://aistudio.google.com/app/apikey")
-        return False
-    
-    if not BLOGGER_CLIENT_ID or not BLOGGER_CLIENT_SECRET or not BLOGGER_REFRESH_TOKEN:
-        print("Error: Blogger OAuth credentials not set")
-        print("Required: BLOGGER_CLIENT_ID, BLOGGER_CLIENT_SECRET, BLOGGER_REFRESH_TOKEN")
-        print("Run get_oauth_token.py to generate these credentials")
-        return False
-    
+        missing_vars.append("GEMINI_API_KEY")
+    if not HF_TOKEN:
+        missing_vars.append("HF_TOKEN")
+    if not BLOGGER_CLIENT_ID:
+        missing_vars.append("BLOGGER_CLIENT_ID")
+    if not BLOGGER_CLIENT_SECRET:
+        missing_vars.append("BLOGGER_CLIENT_SECRET")
+    if not BLOGGER_REFRESH_TOKEN:
+        missing_vars.append("BLOGGER_REFRESH_TOKEN")
     if not BLOG_ID:
-        print("Error: BLOG_ID environment variable not set")
-        print("Get your Blog ID from Blogger dashboard URL")
+        missing_vars.append("BLOG_ID")
+    
+    if missing_vars:
+        print("❌ Error: Missing required environment variables:")
+        for var in missing_vars:
+            print(f"   - {var}")
+        print()
+        print("📋 Required API Keys & Setup:")
+        print("   1. GEMINI_API_KEY - Get from: https://aistudio.google.com/app/apikey")
+        print("   2. HF_TOKEN - Get from: https://huggingface.co/settings/tokens")
+        print("   3. Blogger OAuth (run get_oauth_token.py to generate):")
+        print("      - BLOGGER_CLIENT_ID")
+        print("      - BLOGGER_CLIENT_SECRET")
+        print("      - BLOGGER_REFRESH_TOKEN")
+        print("   4. BLOG_ID - Get from Blogger dashboard URL")
         return False
     
     # Initialize
-    print("Initializing Gemini AI...")
+    print("🔧 Initializing Gemini AI...")
     client = initialize_apis()
+    print("✅ Gemini AI ready")
+    print()
     
     # Get next topic
-    print("Loading next topic...")
+    print("📖 Loading next topic...")
     topic_data = get_next_topic()
     
     if not topic_data:
-        print("No more topics to process!")
+        print("❌ No more topics to process!")
         return False
     
     day = topic_data['day']
@@ -750,110 +765,106 @@ def main():
     # Select category
     category = CATEGORIES[day % len(CATEGORIES)]
     
-    print(f"\nProcessing Day {day}")
-    print(f"Topic: {topic}")
-    print(f"Category: {category}")
+    print(f"📅 Processing Day {day}")
+    print(f"📝 Topic: {topic}")
+    print(f"🏷️  Category: {category}")
     print()
     
-    # Generate content
-    print("Step 1: Generating SEO-optimized blog content...")
+    # Step 1: Generate content
+    print("=" * 70)
+    print("STEP 1: Generating SEO-optimized blog content...")
+    print("=" * 70)
     content = generate_blog_content(client, topic, details, category)
     
     if not content:
-        print("Failed to generate content")
+        print("❌ Failed to generate content")
         return False
     
-    print(f"✓ Content generated ({len(content)} characters)")
+    print(f"✅ Content generated ({len(content)} characters, ~{len(content.split())} words)")
     print()
     
-    # Convert to HTML
-    print("Step 2: Converting Markdown to HTML...")
+    # Step 2: Convert to HTML
+    print("=" * 70)
+    print("STEP 2: Converting Markdown to HTML...")
+    print("=" * 70)
     content_html = convert_markdown_to_html(content)
-    print("✓ Content converted to HTML")
+    print("✅ Content converted to styled HTML")
     print()
     
-    # Get image with deduplication
-    print("Step 3: Fetching image from Unsplash with deduplication...")
+    # Step 3: Generate AI Image with FLUX.1
+    print("=" * 70)
+    print("STEP 3: Generating AI Image with FLUX.1-dev...")
+    print("=" * 70)
     
-    # Load used images from status
-    used_images = []
-    if os.path.exists(STATUS_FILE):
-        try:
-            with open(STATUS_FILE, 'r', encoding='utf-8') as f:
-                status = json.load(f)
-                used_images = status.get('used_images', [])
-                print(f"📋 Loaded {len(used_images)} previously used images")
-        except Exception as e:
-            print(f"⚠️ Could not load used images: {e}")
+    # Generate the image description prompt
+    image_prompt = generate_image_prompt(client, topic)
     
-    # Pass used_images to avoid duplicates
-    image_data_dict = get_unsplash_image(topic, used_images)
+    # Generate the actual image using Hugging Face
+    image_data_dict = generate_image_from_hf(image_prompt, day)
     
     image_url = None
-    new_image_url = None  # For tracking
+    
     if image_data_dict:
         try:
             # Compress image to under 500KB
             compressed_data = compress_image(image_data_dict['data'])
             
             # Save locally (will be committed to GitHub)
-            image_path = save_image_locally(compressed_data, day)
-            
-            # Extract the image URL for tracking
-            new_image_url = image_data_dict.get('image_url')
+            save_image_locally(compressed_data, day)
             
             # Use GitHub raw URL for the image (publicly accessible)
-            # Include attribution that will be placed right after the image
-            attribution = f'<p style="text-align: center; font-size: 13px; color: #888; margin: 10px 0 30px 0;"><em>Photo by <a href="{image_data_dict["photographer_url"]}" target="_blank" style="color: #888; text-decoration: underline;">{image_data_dict["photographer"]}</a> on <a href="{image_data_dict["unsplash_url"]}" target="_blank" style="color: #888; text-decoration: underline;">Unsplash</a></em></p>'
+            attribution = f'<p style="text-align: center; font-size: 13px; color: #888; margin: 10px 0 30px 0;"><em>Generated with AI (<a href="{image_data_dict["photographer_url"]}" target="_blank" style="color: #888; text-decoration: underline;">FLUX.1-dev</a>)</em></p>'
             image_url = f"https://raw.githubusercontent.com/sourcecodeRTX/Autojeta/main/images/day-{day}.jpg#{attribution}"
             
-            print("✓ Image processed and saved")
-            print(f"  GitHub URL: {image_url}")
-            if new_image_url:
-                print(f"  Tracking URL: {new_image_url[:60]}...")
+            print("✅ Image processing complete!")
+            print(f"   GitHub URL: https://raw.githubusercontent.com/sourcecodeRTX/Autojeta/main/images/day-{day}.jpg")
+            
         except Exception as e:
-            print(f"Warning: Image processing failed: {e}")
+            print(f"⚠️  Warning: Image processing failed: {e}")
     else:
-        print("⚠ No image available, proceeding without image")
+        print("⚠️  Image generation failed, proceeding without image")
+        print("   The blog post will be published with text content only")
+    
     print()
     
-    # Publish to Blogger
-    print("Step 4: Publishing to Blogger...")
+    # Step 4: Publish to Blogger
+    print("=" * 70)
+    print("STEP 4: Publishing to Blogger...")
+    print("=" * 70)
     title = topic  # Use only the topic as title, without day prefix
-    labels = [category] # Uses only the selected category from your specific list
+    labels = [category]  # Uses only the selected category
     
     success = publish_to_blogger(title, content_html, labels, image_url)
     
     if not success:
-        print("Failed to publish to Blogger")
+        print("❌ Failed to publish to Blogger")
         return False
     
     print()
     
-    # Update status with used images tracking
-    print("Step 5: Updating status with image tracking...")
+    # Step 5: Update status
+    print("=" * 70)
+    print("STEP 5: Updating status...")
+    print("=" * 70)
     status = load_status()
-    
-    # Get existing used_images or initialize empty list
-    used_images = status.get('used_images', [])
-    
-    # Add new image URL if available
-    if new_image_url and new_image_url not in used_images:
-        used_images.append(new_image_url)
-        print(f"📝 Added new image to tracking (total tracked: {len(used_images)})")
-    
-    # Update status
     status['next_day'] = day + 1
     status['last_processed'] = topic
     status['last_published'] = datetime.now().isoformat()
-    status['used_images'] = used_images  # Save tracked images
+    status['last_image_model'] = 'FLUX.1-dev'  # Track which model was used
     save_status(status)
-    print("✓ Status updated with image tracking")
+    print("✅ Status updated")
     print()
     
-    print("=" * 60)
-    print("✓ Automation completed successfully!")
-    print("=" * 60)
+    print("=" * 70)
+    print("🎉 AUTOMATION COMPLETED SUCCESSFULLY!")
+    print("=" * 70)
+    print(f"✅ Blog post published for Day {day}")
+    print(f"✅ Topic: {topic}")
+    print(f"✅ Category: {category}")
+    if image_url:
+        print(f"✅ AI-generated image included")
+    print(f"✅ Next run will process Day {day + 1}")
+    print()
     
     return True
 
@@ -863,10 +874,10 @@ if __name__ == "__main__":
         success = main()
         exit(0 if success else 1)
     except KeyboardInterrupt:
-        print("\n\nAutomation interrupted by user")
+        print("\n\n⚠️  Automation interrupted by user")
         exit(1)
     except Exception as e:
-        print(f"\n\nFatal error: {e}")
+        print(f"\n\n❌ Fatal error: {e}")
         import traceback
         traceback.print_exc()
         exit(1)
