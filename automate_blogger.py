@@ -474,47 +474,44 @@ Return ONLY the prompt string, nothing else:"""
         return f"A photorealistic 3D render of cryptocurrency technology concept related to {topic}, golden metallic coins on glowing circuit board, cinematic lighting, 8k resolution, no text visible, clean professional composition"
 
 
-def generate_image_with_imagen(client, prompt, day):
+def generate_image_with_pollinations(prompt, day):
     """
-    Generate photorealistic image using Google Imagen 3.
+    Generate image using Pollinations.ai (Free, supports FLUX)
+    """
+    import urllib.parse
+    import random
     
-    Imagen 3 is Google's state-of-the-art image generation model, capable of 
-    producing highly detailed, photorealistic images with excellent prompt adherence.
-    """
-    print(f"🎨 Generating AI image with Google Imagen 3...")
+    print(f"🎨 Generating AI image with Pollinations (FLUX)...")
     print(f"📝 Prompt: {prompt[:100]}...")
     
+    # URL encode the prompt
+    encoded_prompt = urllib.parse.quote(prompt)
+    
+    # Add random seed to ensure uniqueness
+    seed = random.randint(1, 999999)
+    
+    # Construct URL (using FLUX model)
+    image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=768&model=flux&seed={seed}&nologo=true"
+    
     try:
-        # Generate image using Imagen 3 model
-        response = client.models.generate_images(
-            model='imagen-3.0-generate-001',
-            prompt=prompt,
-            config=types.GenerateImagesConfig(
-                number_of_images=1,
-                aspect_ratio="4:3",  # Good for blog posts
-                safety_filter_level="block_only_high",
-                person_generation="allow_adult",
-            )
-        )
+        response = requests.get(image_url, timeout=60)
+        response.raise_for_status()
         
-        if not response.generated_images:
-            raise ValueError("No images generated")
-            
-        image_bytes = response.generated_images[0].image.image_bytes
+        image_bytes = response.content
         
         print("✅ Image generated successfully!")
         print(f"   Size: {len(image_bytes) / 1024:.1f}KB")
         
         return {
             'data': image_bytes,
-            'photographer': 'AI Generation (Google Imagen 3)',
-            'photographer_url': 'https://deepmind.google/technologies/imagen-3/',
-            'unsplash_url': 'https://deepmind.google/technologies/imagen-3/',
-            'image_url': f'imagen-generated-day-{day}'
+            'photographer': 'AI Generation (Pollinations.ai)',
+            'photographer_url': 'https://pollinations.ai/',
+            'unsplash_url': 'https://pollinations.ai/',
+            'image_url': f'pollinations-generated-day-{day}'
         }
         
     except Exception as e:
-        print(f"❌ Error generating image with Imagen 3: {e}")
+        print(f"❌ Error generating image with Pollinations: {e}")
         return None
 
 
@@ -757,16 +754,16 @@ def main():
     print("✅ Content converted to styled HTML")
     print()
     
-    # Step 3: Generate AI Image with Google Imagen 3
+    # Step 3: Generate AI Image with Pollinations.ai
     print("=" * 70)
-    print("STEP 3: Generating AI Image with Google Imagen 3...")
+    print("STEP 3: Generating AI Image with Pollinations.ai...")
     print("=" * 70)
     
     # Generate the image description prompt
     image_prompt = generate_image_prompt(client, topic)
     
-    # Generate image using Imagen 3
-    image_data_dict = generate_image_with_imagen(client, image_prompt, day)
+    # Generate image using Pollinations
+    image_data_dict = generate_image_with_pollinations(image_prompt, day)
     
     image_url = None
     
@@ -779,7 +776,7 @@ def main():
             save_image_locally(compressed_data, day)
             
             # Use GitHub raw URL for the image (publicly accessible)
-            attribution = f'<p style="text-align: center; font-size: 13px; color: #888; margin: 10px 0 30px 0;"><em>Generated with AI (<a href="{image_data_dict["photographer_url"]}" target="_blank" style="color: #888; text-decoration: underline;">Google Imagen 3</a>)</em></p>'
+            attribution = f'<p style="text-align: center; font-size: 13px; color: #888; margin: 10px 0 30px 0;"><em>Generated with AI (<a href="{image_data_dict["photographer_url"]}" target="_blank" style="color: #888; text-decoration: underline;">Pollinations.ai</a>)</em></p>'
             image_url = f"https://raw.githubusercontent.com/sourcecodeRTX/Autojeta/main/images/day-{day}.jpg#{attribution}"
             
             print("✅ Image processing complete!")
@@ -816,7 +813,7 @@ def main():
     status['next_day'] = day + 1
     status['last_processed'] = topic
     status['last_published'] = datetime.now().isoformat()
-    status['last_image_model'] = 'Google Imagen 3'  # Track which model was used
+    status['last_image_model'] = 'Pollinations.ai'  # Track which model was used
     save_status(status)
     print("✅ Status updated")
     print()
