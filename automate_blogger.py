@@ -474,78 +474,47 @@ Return ONLY the prompt string, nothing else:"""
         return f"A photorealistic 3D render of cryptocurrency technology concept related to {topic}, golden metallic coins on glowing circuit board, cinematic lighting, 8k resolution, no text visible, clean professional composition"
 
 
-def generate_image_from_hf(prompt, day):
+def generate_image_with_imagen(client, prompt, day):
     """
-    Generate photorealistic image using Hugging Face FLUX.1-dev model.
+    Generate photorealistic image using Google Imagen 3.
     
-    FLUX.1-dev is currently the state-of-the-art model for:
-    - Photorealism and detail
-    - Prompt adherence
-    - Complex technological textures
-    - Professional quality outputs
-    
-    Returns: Dictionary with image data and metadata, or None if failed
+    Imagen 3 is Google's state-of-the-art image generation model, capable of 
+    producing highly detailed, photorealistic images with excellent prompt adherence.
     """
-    if not HF_TOKEN:
-        print("❌ Error: HF_TOKEN environment variable not set")
-        print("   Get your token from: https://huggingface.co/settings/tokens")
-        return None
-
-    # FLUX.1-dev: Best quality, slower (25-30 steps)
-    # Alternative: "black-forest-labs/FLUX.1-schnell" - Faster, good quality (4-8 steps)
-    model_id = "black-forest-labs/FLUX.1-dev"
-    
-    print(f"🎨 Generating AI image with {model_id}...")
+    print(f"🎨 Generating AI image with Google Imagen 3...")
     print(f"📝 Prompt: {prompt[:100]}...")
     
     try:
-        client = InferenceClient(token=HF_TOKEN)
-        
-        # Generate the image with optimal FLUX.1 settings
-        image = client.text_to_image(
-            prompt,
-            model=model_id,
-            width=1024,      # Landscape aspect ratio
-            height=768,      # Standard blog image dimensions
-            guidance_scale=3.5,  # Lower guidance for FLUX = more realism
-            num_inference_steps=28  # 25-30 is sweet spot for quality/speed
+        # Generate image using Imagen 3 model
+        response = client.models.generate_images(
+            model='imagen-3.0-generate-001',
+            prompt=prompt,
+            config=types.GenerateImagesConfig(
+                number_of_images=1,
+                aspect_ratio="4:3",  # Good for blog posts
+                safety_filter_level="block_only_high",
+                person_generation="allow_adult",
+            )
         )
         
-        # Save to buffer for processing
-        output = BytesIO()
-        image.save(output, format='JPEG', quality=95)
+        if not response.generated_images:
+            raise ValueError("No images generated")
+            
+        image_bytes = response.generated_images[0].image.image_bytes
         
         print("✅ Image generated successfully!")
-        print(f"   Size: {len(output.getvalue()) / 1024:.1f}KB")
+        print(f"   Size: {len(image_bytes) / 1024:.1f}KB")
         
-        # Return structured data compatible with original workflow
         return {
-            'data': output.getvalue(),
-            'photographer': 'AI Generation (FLUX.1-dev)',
-            'photographer_url': 'https://huggingface.co/black-forest-labs/FLUX.1-dev',
-            'unsplash_url': 'https://huggingface.co/',
-            'image_url': f'flux-generated-day-{day}'
+            'data': image_bytes,
+            'photographer': 'AI Generation (Google Imagen 3)',
+            'photographer_url': 'https://deepmind.google/technologies/imagen-3/',
+            'unsplash_url': 'https://deepmind.google/technologies/imagen-3/',
+            'image_url': f'imagen-generated-day-{day}'
         }
         
     except Exception as e:
-        error_msg = str(e)
-        print(f"❌ Error generating image: {error_msg}")
-        
-        # Provide helpful error messages
-        if "429" in error_msg or "rate" in error_msg.lower():
-            print("⚠️  Rate limit reached on Hugging Face.")
-            print("   Solutions:")
-            print("   1. Wait a few minutes and try again")
-            print("   2. Switch to FLUX.1-schnell (faster, free tier friendly)")
-            print("   3. Upgrade Hugging Face subscription for higher limits")
-        elif "401" in error_msg or "unauthorized" in error_msg.lower():
-            print("⚠️  Authentication failed. Check your HF_TOKEN:")
-            print("   - Ensure it's set correctly in environment variables")
-            print("   - Verify token is valid at https://huggingface.co/settings/tokens")
-        elif "timeout" in error_msg.lower():
-            print("⚠️  Request timed out. FLUX.1-dev can be slow on free tier.")
-            print("   Consider switching to FLUX.1-schnell for faster generation")
-        
+        print(f"❌ Error generating image with Imagen 3: {e}")
         return None
 
 
@@ -709,7 +678,7 @@ def publish_to_blogger(title, content_html, labels, image_url=None):
 def main():
     """Main automation workflow with AI image generation"""
     print("=" * 70)
-    print("🚀 Crypto Basic Guide - Blog Automation with AI Images (FLUX.1)")
+    print("🚀 Crypto Basic Guide - Blog Automation with AI Images (Imagen 3)")
     print("=" * 70)
     print()
     
@@ -718,8 +687,6 @@ def main():
     
     if not GEMINI_API_KEY:
         missing_vars.append("GEMINI_API_KEY")
-    if not HF_TOKEN:
-        missing_vars.append("HF_TOKEN")
     if not BLOGGER_CLIENT_ID:
         missing_vars.append("BLOGGER_CLIENT_ID")
     if not BLOGGER_CLIENT_SECRET:
@@ -736,12 +703,11 @@ def main():
         print()
         print("📋 Required API Keys & Setup:")
         print("   1. GEMINI_API_KEY - Get from: https://aistudio.google.com/app/apikey")
-        print("   2. HF_TOKEN - Get from: https://huggingface.co/settings/tokens")
-        print("   3. Blogger OAuth (run get_oauth_token.py to generate):")
+        print("   2. Blogger OAuth (run get_oauth_token.py to generate):")
         print("      - BLOGGER_CLIENT_ID")
         print("      - BLOGGER_CLIENT_SECRET")
         print("      - BLOGGER_REFRESH_TOKEN")
-        print("   4. BLOG_ID - Get from Blogger dashboard URL")
+        print("   3. BLOG_ID - Get from Blogger dashboard URL")
         return False
     
     # Initialize
@@ -791,16 +757,16 @@ def main():
     print("✅ Content converted to styled HTML")
     print()
     
-    # Step 3: Generate AI Image with FLUX.1
+    # Step 3: Generate AI Image with Google Imagen 3
     print("=" * 70)
-    print("STEP 3: Generating AI Image with FLUX.1-dev...")
+    print("STEP 3: Generating AI Image with Google Imagen 3...")
     print("=" * 70)
     
     # Generate the image description prompt
     image_prompt = generate_image_prompt(client, topic)
     
-    # Generate the actual image using Hugging Face
-    image_data_dict = generate_image_from_hf(image_prompt, day)
+    # Generate image using Imagen 3
+    image_data_dict = generate_image_with_imagen(client, image_prompt, day)
     
     image_url = None
     
@@ -813,7 +779,7 @@ def main():
             save_image_locally(compressed_data, day)
             
             # Use GitHub raw URL for the image (publicly accessible)
-            attribution = f'<p style="text-align: center; font-size: 13px; color: #888; margin: 10px 0 30px 0;"><em>Generated with AI (<a href="{image_data_dict["photographer_url"]}" target="_blank" style="color: #888; text-decoration: underline;">FLUX.1-dev</a>)</em></p>'
+            attribution = f'<p style="text-align: center; font-size: 13px; color: #888; margin: 10px 0 30px 0;"><em>Generated with AI (<a href="{image_data_dict["photographer_url"]}" target="_blank" style="color: #888; text-decoration: underline;">Google Imagen 3</a>)</em></p>'
             image_url = f"https://raw.githubusercontent.com/sourcecodeRTX/Autojeta/main/images/day-{day}.jpg#{attribution}"
             
             print("✅ Image processing complete!")
@@ -850,7 +816,7 @@ def main():
     status['next_day'] = day + 1
     status['last_processed'] = topic
     status['last_published'] = datetime.now().isoformat()
-    status['last_image_model'] = 'FLUX.1-dev'  # Track which model was used
+    status['last_image_model'] = 'Google Imagen 3'  # Track which model was used
     save_status(status)
     print("✅ Status updated")
     print()
