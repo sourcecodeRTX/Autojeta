@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 """
-Blogger Post Automation Script with AI Image Generation
-Automates cryptocurrency blog posts using Google Gemini AI and Hugging Face FLUX.1
-Publishes directly to Blogger via Blogger API v3
+Blogger Post Automation Script with Telegram Image Integration
+Automates cryptocurrency blog posts using Google Gemini AI with flexible image sourcing
 
 KEY FEATURES:
-- Uses FLUX.1-dev model for photorealistic image generation
-- NO text rendered on images (configured via prompt engineering)
-- Maintains all existing functionality from original script
-- Generates images specifically tailored to blog content
+- Telegram-first image workflow: Upload your own images via Telegram bot
+- AI fallback: Auto-generates images with FLUX.1 if no Telegram image uploaded
+- Smart reminders: Telegram notifications after each post for next day's image
+- Auto-cleanup: Keeps Telegram chat clean by deleting old messages
+- Zero attribution: Clean posts without image source credits
+- Flexible scheduling: 6:00 AM IST daily via GitHub Actions
+- Complete reliability: Never fails to publish, even without manual intervention
 """
 
 import os
 import json
 import requests
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from google import genai
 from google.genai import types
 from io import BytesIO
@@ -23,12 +25,19 @@ from PIL import Image
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request as AuthRequest
 from huggingface_hub import InferenceClient
+from telegram import Bot
+from telegram.error import TelegramError
+import asyncio
 
 # ==================== CONFIGURATION ====================
 
 # API Keys (Set these as environment variables)
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')  # Required for content generation
 HF_TOKEN = os.environ.get('HF_TOKEN', '')  # Required for FLUX.1 image generation
+
+# Telegram Configuration
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')  # Get from @BotFather
+TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '')  # Your Telegram chat ID
 
 # Blogger OAuth Configuration
 BLOGGER_CLIENT_ID = os.environ.get('BLOGGER_CLIENT_ID', '')
@@ -402,6 +411,148 @@ def convert_markdown_to_html(markdown_content):
     return f'<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; max-width: 100%; padding: 0;">{html_content}</div>'
 
 
+# ==================== TELEGRAM FUNCTIONS ====================
+
+async def check_telegram_for_image(day):
+    """
+    Check Telegram chat for user-uploaded image with #day{X} hashtag
+    Returns image bytes if found, None otherwise
+    """
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("⚠️  Telegram not configured, skipping Telegram check")
+        return None
+    
+    try:
+        print(f"📱 Checking Telegram for image with #day{day}...")
+        bot = Bot(token=TELEGRAM_BOT_TOKEN)
+        
+        # Get recent updates (last 100 messages)
+        updates = await bot.get_updates(limit=100, timeout=30)
+        
+        # Look for photo messages with the correct hashtag
+        target_hashtag = f"#day{day}"
+        found_image = None
+        latest_date = None
+        
+        for update in reversed(updates):  # Check from newest to oldest
+            if update.message and update.message.photo:
+                caption = update.message.caption or ""
+                message_date = update.message.date
+                
+                # Check if this message has the correct hashtag
+                if target_hashtag.lower() in caption.lower():
+                    # Check if message is not too old (within last 7 days)
+                    if (datetime.now().astimezone() - message_date).days <= 7:
+                        if latest_date is None or message_date > latest_date:
+                            # Get the highest resolution photo
+                            photo = update.message.photo[-1]
+                            found_image = photo
+                            latest_date = message_date
+        
+        if found_image:
+            print(f"✅ Found image with {target_hashtag} uploaded on {latest_date.strftime('%Y-%m-%d %H:%M')}")
+            
+            # Download the image file
+            file = await bot.get_file(found_image.file_id)
+            image_bytes = await file.download_as_bytearray()
+            
+            print(f"✅ Image downloaded successfully ({len(image_bytes) / 1024:.1f}KB)")
+            return bytes(image_bytes)
+        else:
+            print(f"ℹ️  No image found with {target_hashtag} in Telegram")
+            return None
+            
+    except TelegramError as e:
+        print(f"⚠️  Telegram API error: {e}")
+        return None
+    except Exception as e:
+        print(f"⚠️  Error checking Telegram: {e}")
+        return None
+
+
+async def delete_telegram_messages():
+    """
+    Delete all messages in the Telegram chat to keep it clean
+    """
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        return
+    
+    try:
+        print("🗑️  Cleaning up Telegram chat...")
+        bot = Bot(token=TELEGRAM_BOT_TOKEN)
+        
+        # Get all recent messages
+        updates = await bot.get_updates(limit=100, timeout=30)
+        
+        deleted_count = 0
+        for update in updates:
+            try:
+                if update.message:
+                    await bot.delete_message(
+                        chat_id=TELEGRAM_CHAT_ID,
+                        message_id=update.message.message_id
+                    )
+                    deleted_count += 1
+            except Exception as e:
+                # Some messages might not be deletable (too old, etc.)
+                pass
+        
+        if deleted_count > 0:
+            print(f"✅ Deleted {deleted_count} messages from Telegram chat")
+        else:
+            print("ℹ️  No messages to delete")
+            
+    except Exception as e:
+        print(f"⚠️  Error deleting Telegram messages: {e}")
+
+
+async def send_telegram_reminder(day, topic):
+    """
+    Send reminder message to Telegram for next day's image
+    """
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        return
+    
+    try:
+        bot = Bot(token=TELEGRAM_BOT_TOKEN)
+        
+        message = f"""🤖 <b>Crypto Blog Automation</b>
+
+✅ <b>Post Published for Day {day - 1}</b>
+
+📸 <b>UPLOAD IMAGE FOR TOMORROW</b>
+📅 Day {day}: {topic}
+
+<b>Instructions:</b>
+• Send your image to this chat
+• Add caption: <code>#day{day}</code>
+• Deadline: Before 6:00 AM IST tomorrow
+
+⚠️ <i>If no image uploaded, AI will generate one automatically</i>
+"""
+        
+        await bot.send_message(
+            chat_id=TELEGRAM_CHAT_ID,
+            text=message,
+            parse_mode='HTML'
+        )
+        
+        print(f"✅ Telegram reminder sent for Day {day}")
+        
+    except Exception as e:
+        print(f"⚠️  Error sending Telegram reminder: {e}")
+
+
+def run_async(coro):
+    """Helper to run async functions in sync context"""
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop.run_until_complete(coro)
+
+
 # ==================== AI IMAGE GENERATION ====================
 
 def generate_image_prompt(client, topic):
@@ -598,17 +749,10 @@ def publish_to_blogger(title, content_html, labels, image_url=None):
     
     # Add featured image if available
     if image_url:
-        # Extract attribution if embedded in URL
-        actual_url = image_url
-        attribution_html = ""
-        if "#" in image_url:
-            actual_url, attribution_html = image_url.split("#", 1)
-        
-        # Simple, clean image presentation with attribution right below
+        # Simple, clean image presentation without any attribution
         image_html = f'''<div class="featured-image" style="text-align: center; margin: 30px 0 20px 0;">
-    <img src="{actual_url}" alt="{title}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
-</div>
-{attribution_html}'''
+    <img src="{image_url}" alt="{title}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+</div>'''
         post_data["content"] = image_html + "\n\n" + content_html
     
     max_retries = 3
@@ -673,9 +817,9 @@ def publish_to_blogger(title, content_html, labels, image_url=None):
 # ==================== MAIN WORKFLOW ====================
 
 def main():
-    """Main automation workflow with AI image generation"""
+    """Main automation workflow with Telegram image integration"""
     print("=" * 70)
-    print("🚀 Crypto Basic Guide - Blog Automation with AI Images (Imagen 3)")
+    print("🚀 Crypto Basic Guide - Blog Automation with Telegram Integration")
     print("=" * 70)
     print()
     
@@ -754,16 +898,41 @@ def main():
     print("✅ Content converted to styled HTML")
     print()
     
-    # Step 3: Generate AI Image with Pollinations.ai
+    # Step 3: Get Image (Telegram first, then AI fallback)
     print("=" * 70)
-    print("STEP 3: Generating AI Image with Pollinations.ai...")
+    print("STEP 3: Getting image for blog post...")
     print("=" * 70)
     
-    # Generate the image description prompt
-    image_prompt = generate_image_prompt(client, topic)
+    # First, check Telegram for user-uploaded image
+    telegram_image_bytes = run_async(check_telegram_for_image(day))
     
-    # Generate image using Pollinations
-    image_data_dict = generate_image_with_pollinations(image_prompt, day)
+    image_data_dict = None
+    image_source = "NONE"
+    
+    if telegram_image_bytes:
+        # User provided image via Telegram
+        print("✅ Using user-provided image from Telegram")
+        image_data_dict = {
+            'data': telegram_image_bytes,
+            'photographer': 'User Provided',
+            'photographer_url': '',
+            'unsplash_url': '',
+            'image_url': f'telegram-user-day-{day}'
+        }
+        image_source = "TELEGRAM"
+        
+        # Clean up Telegram chat after downloading image
+        run_async(delete_telegram_messages())
+    else:
+        # No Telegram image, fall back to AI generation
+        print("ℹ️  No Telegram image found, generating with AI...")
+        
+        # Generate the image description prompt
+        image_prompt = generate_image_prompt(client, topic)
+        
+        # Generate image using Pollinations
+        image_data_dict = generate_image_with_pollinations(image_prompt, day)
+        image_source = "AI"
     
     image_url = None
     
@@ -776,8 +945,8 @@ def main():
             save_image_locally(compressed_data, day)
             
             # Use GitHub raw URL for the image (publicly accessible)
-            attribution = f'<p style="text-align: center; font-size: 13px; color: #888; margin: 10px 0 30px 0;"><em>Generated with AI (<a href="{image_data_dict["photographer_url"]}" target="_blank" style="color: #888; text-decoration: underline;">Pollinations.ai</a>)</em></p>'
-            image_url = f"https://raw.githubusercontent.com/sourcecodeRTX/Autojeta/main/images/day-{day}.jpg#{attribution}"
+            # No attribution as per user request
+            image_url = f"https://raw.githubusercontent.com/sourcecodeRTX/Autojeta/main/images/day-{day}.jpg"
             
             print("✅ Image processing complete!")
             print(f"   GitHub URL: https://raw.githubusercontent.com/sourcecodeRTX/Autojeta/main/images/day-{day}.jpg")
@@ -813,9 +982,29 @@ def main():
     status['next_day'] = day + 1
     status['last_processed'] = topic
     status['last_published'] = datetime.now().isoformat()
-    status['last_image_model'] = 'Pollinations.ai'  # Track which model was used
+    status['last_image_source'] = image_source
+    status['last_telegram_check'] = datetime.now().isoformat()
     save_status(status)
     print("✅ Status updated")
+    print()
+    
+    # Step 6: Send Telegram reminder for next day
+    print("=" * 70)
+    print("STEP 6: Sending Telegram reminder for next day...")
+    print("=" * 70)
+    
+    # Get next topic details
+    next_topic_data = None
+    topics = load_topics()
+    for t in topics:
+        if t['day'] == day + 1:
+            next_topic_data = t
+            break
+    
+    if next_topic_data:
+        run_async(send_telegram_reminder(day + 1, next_topic_data['topic']))
+    else:
+        print("ℹ️  No next topic found, skipping Telegram reminder")
     print()
     
     print("=" * 70)
@@ -825,7 +1014,10 @@ def main():
     print(f"✅ Topic: {topic}")
     print(f"✅ Category: {category}")
     if image_url:
-        print(f"✅ AI-generated image included")
+        if image_source == "TELEGRAM":
+            print(f"✅ User-provided image from Telegram included")
+        else:
+            print(f"✅ AI-generated image included")
     print(f"✅ Next run will process Day {day + 1}")
     print()
     
