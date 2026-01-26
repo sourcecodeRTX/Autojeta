@@ -2,23 +2,6 @@
   "next_day": 21,
   "last_processed": "Crypto Security: Essential Tools and Best Practices",
   "last_published": "2026-01-26T03:01:32.530249",
-  "used_images": [
-    "https://images.unsplash.com/photo-1619942243797-0fd4e05f1702?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfGFsbHx8fHx8fHx8fDE3NjgxMDM2MDR8&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1626163015484-81fc7e3b90d8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfGFsbHx8fHx8fHx8fDE3NjgxMDM2MDV8&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1627570120184-7aec90f5613a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHwxfHxjcnlwdG8lMjBjcnlwdG9jdXJyZW5jeXxlbnwwfDB8fHwxNzY4MDY1NDY2fDA&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1620778184222-6aee903c672e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHw0fHxjcnlwdG9jdXJyZW5jeSUyMGJsb2NrY2hhaW58ZW58MHwwfHx8MTc2ODE4NTYwMHww&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1672911640817-d2902754be5a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHw5fHxjcnlwdG9jdXJyZW5jeSUyMGJsb2NrY2hhaW58ZW58MHwwfHx8MTc2ODE4NTYwMHww&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1590286162167-70fb467846ae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHwxfHxjcnlwdG9jdXJyZW5jeSUyMGJsb2NrY2hhaW58ZW58MHwwfHx8MTc2ODM1ODM4MHww&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1620778187368-30aa2f6e7755?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHw2fHxjcnlwdG9jdXJyZW5jeSUyMGJsb2NrY2hhaW58ZW58MHwwfHx8MTc2ODM1ODM4MHww&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1590286162167-70fb467846ae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHwxfHxjcnlwdG9jdXJyZW5jeSUyMGJsb2NrY2hhaW58ZW58MHwwfHx8MTc2ODUzMDg4Mnww&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1620778182530-703effa65a06?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHw3fHxjcnlwdG9jdXJyZW5jeSUyMGJsb2NrY2hhaW58ZW58MHwwfHx8MTc2ODUzMDg4Mnww&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1664526936959-84bdea9f37fa?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHw4fHxldGhlcmV1bSUyMGJsb2NrY2hhaW58ZW58MHwwfHx8MTc2ODcwNDk1OXww&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1627570120184-7aec90f5613a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHwzfHxjcnlwdG8lMjBjcnlwdG9jdXJyZW5jeXxlbnwwfDB8fHwxNzY4NzkwNDQxfDA&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1620778186108-518ea91a73d9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHw5fHxjcnlwdG9jdXJyZW5jeSUyMGJsb2NrY2hhaW58ZW58MHwwfHx8MTc2ODg3NjU0NHww&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1620778187276-ea6c138e8b94?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHw3fHxjcnlwdG9jdXJyZW5jeSUyMGJsb2NrY2hhaW58ZW58MHwwfHx8MTc2ODg3NjU0NHww&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1640459958548-56c1c6717a40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHwxMHx8Y3J5cHRvY3VycmVuY3klMjBibG9ja2NoYWlufGVufDB8MHx8fDE3NjkwNDk1NjN8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1590286162167-70fb467846ae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHwxfHxjcnlwdG9jdXJyZW5jeSUyMGJsb2NrY2hhaW58ZW58MHwwfHx8MTc2OTA0OTU2M3ww&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1620778186108-518ea91a73d9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NTU0MTB8MHwxfHNlYXJjaHw5fHxjcnlwdG9jdXJyZW5jeSUyMGJsb2NrY2hhaW58ZW58MHwwfHx8MTc2OTIyMTg0Nnww&ixlib=rb-4.1.0&q=80&w=1080"
-  ],
-  "last_image_model": "Pollinations.ai"
+  "last_image_source": "AI",
+  "last_telegram_check": "2026-01-26T03:01:32.530249"
 }
