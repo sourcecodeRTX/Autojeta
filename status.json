@@ -1,7 +1,9 @@
 {
-  "next_day": 1,
-  "last_processed": "",
-  "last_published": "",
-  "last_image_source": "",
-  "used_images": []
+  "next_day": 2,
+  "last_processed": "Zero-Knowledge Proof Crypto 2026: zkSNARKs vs zkSTARKs Explained",
+  "last_published": "2026-02-19T12:02:26.588224",
+  "last_image_source": "ZIP",
+  "used_images": [
+    "unsplash_-6CiqXsgGaM_None.webp"
+  ]
 }
