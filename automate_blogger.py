@@ -405,16 +405,17 @@ def convert_markdown_to_html(markdown_content):
 
 # ==================== ZIP IMAGE EXTRACTION ====================
 
-def extract_image_from_zip(day):
+def extract_image_from_zip(day, status):
     """
-    Extract one image from the zip file based on the day number.
-    Uses day as an index into the sorted list of images (wraps around).
-    The zip file is never modified — no re-zipping, no version bloat.
-    Returns the image bytes if successful, None otherwise.
+    Extract the next unused image from the zip file.
+    Checks status['used_images'] to skip already-used filenames.
+    Returns (image_bytes, filename) if successful, (None, None) otherwise.
     """
     if not os.path.exists(ZIP_FILE):
         print(f"❌ Zip file not found: {ZIP_FILE}")
-        return None
+        return None, None
+    
+    used_images = set(status.get('used_images', []))
     
     try:
         print(f"📦 Extracting image for Day {day} from {ZIP_FILE}...")
@@ -424,23 +425,31 @@ def extract_image_from_zip(day):
             
             if not image_files:
                 print("❌ No images found in zip file")
-                return None
+                return None, None
             
             image_files.sort()
             
-            index = (day - 1) % len(image_files)
-            selected_image = image_files[index]
+            available = [f for f in image_files if f not in used_images]
             
-            print(f"✅ Selected image [{index + 1}/{len(image_files)}]: {selected_image}")
+            if not available:
+                print(f"⚠️  All {len(image_files)} images have been used. Resetting usage history.")
+                used_images.clear()
+                status['used_images'] = []
+                available = image_files
+            
+            selected_image = available[0]
+            
+            print(f"✅ Selected image: {selected_image}")
+            print(f"📊 Used: {len(used_images)} | Available: {len(available)} | Total: {len(image_files)}")
             
             image_data = zip_ref.read(selected_image)
         
         print(f"✅ Image extracted successfully ({len(image_data) / 1024:.1f}KB)")
-        return image_data
+        return image_data, selected_image
         
     except Exception as e:
         print(f"❌ Error extracting image from zip: {e}")
-        return None
+        return None, None
 
 
 def save_image_locally(image_data, day):
@@ -655,7 +664,8 @@ def main():
     print("=" * 70)
     
     # Extract image from zip file
-    image_data = extract_image_from_zip(day)
+    status = load_status()
+    image_data, image_filename = extract_image_from_zip(day, status)
     image_source = "ZIP"
     image_url = None
     
@@ -706,6 +716,11 @@ def main():
     status['last_processed'] = topic
     status['last_published'] = datetime.now().isoformat()
     status['last_image_source'] = image_source
+    if image_filename:
+        used = status.get('used_images', [])
+        if image_filename not in used:
+            used.append(image_filename)
+        status['used_images'] = used
     save_status(status)
     print("✅ Status updated")
     print()
