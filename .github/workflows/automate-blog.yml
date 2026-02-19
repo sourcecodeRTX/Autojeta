@@ -42,7 +42,7 @@ jobs:
         run: |
           git config --local user.email "rattyramraj@gmail.com"
           git config --local user.name "sourcecodeRTX"
-          git add status.json images/ crypto_landscape_1000.zip || true
+          git add status.json images/ || true
           git diff --quiet && git diff --staged --quiet || git commit -m "Update blog status - Day ${{ github.run_number }}"
 
       - name: Push changes
