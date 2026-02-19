@@ -17,7 +17,6 @@ import json
 import requests
 import time
 import zipfile
-import shutil
 from datetime import datetime, timedelta
 from google import genai
 from google.genai import types
@@ -408,7 +407,9 @@ def convert_markdown_to_html(markdown_content):
 
 def extract_image_from_zip(day):
     """
-    Extract one image from the zip file and re-zip the remaining images.
+    Extract one image from the zip file based on the day number.
+    Uses day as an index into the sorted list of images (wraps around).
+    The zip file is never modified — no re-zipping, no version bloat.
     Returns the image bytes if successful, None otherwise.
     """
     if not os.path.exists(ZIP_FILE):
@@ -416,13 +417,8 @@ def extract_image_from_zip(day):
         return None
     
     try:
-        print(f"📦 Extracting image from {ZIP_FILE}...")
+        print(f"📦 Extracting image for Day {day} from {ZIP_FILE}...")
         
-        # Create temporary directory for extraction
-        temp_dir = 'temp_images'
-        os.makedirs(temp_dir, exist_ok=True)
-        
-        # Extract all images
         with zipfile.ZipFile(ZIP_FILE, 'r') as zip_ref:
             image_files = [f for f in zip_ref.namelist() if f.lower().endswith(('.webp', '.jpg', '.jpeg', '.png'))]
             
@@ -430,52 +426,20 @@ def extract_image_from_zip(day):
                 print("❌ No images found in zip file")
                 return None
             
-            # Sort to ensure consistent order
             image_files.sort()
             
-            # Take the first image
-            selected_image = image_files[0]
-            remaining_images = image_files[1:]
+            index = (day - 1) % len(image_files)
+            selected_image = image_files[index]
             
-            print(f"✅ Selected image: {selected_image}")
-            print(f"📊 Remaining images: {len(remaining_images)}")
+            print(f"✅ Selected image [{index + 1}/{len(image_files)}]: {selected_image}")
             
-            # Extract the selected image
-            zip_ref.extract(selected_image, temp_dir)
-            
-            # Read the selected image
-            selected_image_path = os.path.join(temp_dir, selected_image)
-            with open(selected_image_path, 'rb') as f:
-                image_data = f.read()
-        
-        # Re-create the zip with remaining images
-        if remaining_images:
-            # Extract remaining images to temp directory
-            with zipfile.ZipFile(ZIP_FILE, 'r') as zip_ref:
-                for img in remaining_images:
-                    zip_ref.extract(img, temp_dir)
-            
-            # Create new zip with remaining images
-            with zipfile.ZipFile(ZIP_FILE, 'w', zipfile.ZIP_DEFLATED) as new_zip:
-                for img in remaining_images:
-                    img_path = os.path.join(temp_dir, img)
-                    new_zip.write(img_path, img)
-            
-            print(f"✅ Re-zipped {len(remaining_images)} remaining images")
-        else:
-            print("⚠️  No more images left in zip file")
-        
-        # Clean up temp directory
-        shutil.rmtree(temp_dir)
+            image_data = zip_ref.read(selected_image)
         
         print(f"✅ Image extracted successfully ({len(image_data) / 1024:.1f}KB)")
         return image_data
         
     except Exception as e:
         print(f"❌ Error extracting image from zip: {e}")
-        # Clean up temp directory if it exists
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
         return None
 
 
