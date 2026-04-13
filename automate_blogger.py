@@ -225,7 +225,7 @@ Generate the comprehensive, SEO-optimized, narrative-driven content (900-1000 wo
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-2.5-flash-lite',
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.75, # Slightly reduced for better SEO focus
@@ -271,7 +271,7 @@ Continue writing naturally from the point where it was cut off. Ensure the tone 
 Make sure to write a proper conclusion. Format in Markdown. Continue:"""
                 
                 continuation_response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-2.5-flash-lite',
                     contents=continuation_prompt,
                     config=types.GenerateContentConfig(
                         temperature=0.75,
