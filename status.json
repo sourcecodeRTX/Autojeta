@@ -1,7 +1,7 @@
 {
-  "next_day": 123,
-  "last_processed": "Algorand Governance 2026: Voting and Rewards",
-  "last_published": "2026-06-21T05:27:18.813985",
+  "next_day": 124,
+  "last_processed": "Liquid Staking Derivatives 2026: stETH, rETH, cbETH",
+  "last_published": "2026-06-22T05:42:44.159918",
   "last_image_source": "ZIP",
   "used_images": [
     "unsplash_-6CiqXsgGaM_None.webp",
@@ -125,6 +125,7 @@
     "unsplash_6Ih4UoqzaAs_None.webp",
     "unsplash_6Jdz9qiZfsQ_None.webp",
     "unsplash_6WXbPWhT8c8_None.webp",
-    "unsplash_6dW3xyQvcYE_None.webp"
+    "unsplash_6dW3xyQvcYE_None.webp",
+    "unsplash_6meY2WdaIVg_None.webp"
   ]
 }
