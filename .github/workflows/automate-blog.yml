@@ -2,8 +2,8 @@ name: Automate Crypto Blog Posts
 
 on:
   schedule:
-    # Run every day at 6:00 AM IST (0:30 AM UTC, since IST = UTC+5:30)
-    - cron: '30 0 * * *'
+    # Run every day at 5:12 AM IST (11:42 PM UTC of the previous day, since IST = UTC+5:30)
+    - cron: '42 23 * * *'
 
   workflow_dispatch:  # Allows manual trigger from GitHub Actions tab
 
