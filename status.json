@@ -1,7 +1,7 @@
 {
-  "next_day": 144,
-  "last_processed": "Byzantine Fault Tolerance in Blockchain",
-  "last_published": "2026-07-21T01:04:20.256898",
+  "next_day": 145,
+  "last_processed": "Homomorphic Encryption for Blockchain Privacy",
+  "last_published": "2026-07-22T01:04:02.960626",
   "last_image_source": "ZIP",
   "used_images": [
     "unsplash_-6CiqXsgGaM_None.webp",
@@ -146,6 +146,7 @@
     "unsplash_7ojyp-IXW7w_None.webp",
     "unsplash_7qLFoAZhqHw_None.webp",
     "unsplash_7s_wJqE0fsw_None.webp",
-    "unsplash_7tYTWoS8kfM_None.webp"
+    "unsplash_7tYTWoS8kfM_None.webp",
+    "unsplash_7vdATyXc0hQ_None.webp"
   ]
 }
